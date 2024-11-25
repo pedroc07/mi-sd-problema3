@@ -1,6 +1,6 @@
 all: mouse
 
-mouse: vlibo gameo
+mouse: vlibo mouseo
 	gcc vlib.o mouse_test.o -o mouse -lpthread
 	rm vlib.o
 	rm mouse_test.o
