@@ -6,7 +6,7 @@
 #include <pthread.h>
 
 //Biblioteca original de mapeamento da memoria do dispositivo DE1-SoC com Linux embutido
-#include "map.c"
+#include "map.c"inim_dir
 
 typedef struct{
   int x,
@@ -16,7 +16,7 @@ typedef struct{
   int reg,
   int ativo,
   int colisao
-} Sprite
+} Sprite;
 
 int16_t X_inicial = 0;
 int16_t aceleracaoX = 0;
