@@ -8,6 +8,16 @@
 //Biblioteca original de mapeamento da memoria do dispositivo DE1-SoC com Linux embutido
 #include "map.c"
 
+typedef struct{
+  int x,
+  int y,
+  char dir,
+  int offset,
+  int reg,
+  int ativo,
+  int colisao
+} Sprite
+
 int16_t X_inicial = 0;
 int16_t aceleracaoX = 0;
 int16_t aceleracaoY = 0;
@@ -44,24 +54,27 @@ int mod(int num){
 }
 
 int move_inim(){
-    int inim_x = 0;
-    int inim_y = 200;
-    char inim_dir = 'R';
+    Sprite E1;
+    E1.x = 0;
+    E1.y = 200;
+    E1.dir = 'R';
+    E1.offset = 600;
+    E1.ativo = 1;
     
-    while(1) {
+    while(1) {x*
     usleep(10000);
-    WBR_SPRITE(5, 600, inim_x, inim_y, 1);
+    WBR_SPRITE(5, E1.offset, E1.x, E1.y, E1.ativo);
 
-    if (inim_dir == 'R'){
-      inim_x ++;
-      if (inim_x == 600){
-        inim_dir = 'L';
+    if (E1.dir == 'R'){
+      E1.x ++;
+      if (E1.x == 600){
+        E1.dir = 'L';
     }
     }
     else {
-      inim_x --;
-      if (inim_x == 0){
-        inim_dir = 'R';
+      E1.x --;
+      if (E1.x == 0){
+        E1.dir = 'R';
     }
     }    
     }
