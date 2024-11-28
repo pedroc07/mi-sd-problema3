@@ -81,6 +81,75 @@ void move_inim(){
     }
 }
 
+/*Funcao para verificar colisao
+Argumentos:
+xi1 = menor posicao x da hitbox 1
+yi1 = menor posicao y da hitbox 1
+xf1 = maior posicao x da hitbox 1
+yf1 = maior posicao y da hitbox 1
+xi2 = menor posicao x da hitbox 2
+yi2 = menor posicao y da hitbox 2
+xf2 = maior posicao x da hitbox 2
+yf2 = maior posicao y da hitbox 2
+*/
+int chk_collision(int xi1, int yi1, int xf1, int yf1, int xi2, int yi2, int xf2, int yf2) {
+  //Primeiro fazemos a checagem no eixo y, visto que por se tratar de um top-down shooter, as colisoes tem chance maior de ocorrer enquanto movendo no eixo y
+  int miny;
+  int maxy;
+  //Calcular o comprimento y de cada hitbox
+  int ylen1 = (yf1 - yi1 + 1);
+  int ylen2 = (yf2 - yi2 + 1);
+
+  //Achar o valor minimo de y entre ambas as hitboxes
+  if (yi2 < yi1) {
+    miny = yi2;
+  }
+  else {
+    miny = yi1;
+  }
+
+  //Achar o valor maximo de y entre ambas as hitboxes
+  if (yf2 > yf1) {
+    maxy = yf2;
+  }
+  else {
+    maxy = yf1;
+  }
+
+  //Verificacao de NAO-sobreposicao no eixo y, ou seja, ver se a distancia entre a ponta de uma hitbox e a ponta oposta da outra e maior ou igual a soma dos comprimentos das hitboxes
+  if ((maxy - miny + 1) >= (ylen1 + ylen2)) {
+    //Se nao houver sobreposicao no eixo y, nao pode haver colisao alguma, retornando 0
+    return 0;
+  }
+  
+  //Repete o processo para o eixo x
+  int minx;
+  int maxx;
+  int xlen1 = (xf1 - xi1 + 1);
+  int xlen2 = (xf2 - xi2 + 1);
+
+  if (xi2 < xi1) {
+    minx = xi2;
+  }
+  else {
+    minx = xi1;
+  }
+
+  if (xf2 > xf1) {
+    maxx = xf2;
+  }
+  else {
+    maxx = xf1;
+  }
+
+  if ((maxx - minx + 1) >= (xlen1 + xlen2)) {
+    return 0;
+  }
+
+  //Se nenhum dos teste de NAO-sobreposicao "passou", existe uma colisao
+  return 1;
+}
+
 int main(int argc, char** argv)
 {
     int fd, bytes;
