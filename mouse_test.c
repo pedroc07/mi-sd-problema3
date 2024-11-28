@@ -9,13 +9,13 @@
 #include "map.c"inim_dir
 
 typedef struct{
-  int x,
-  int y,
-  char dir,
-  int offset,
-  int reg,
-  int ativo,
-  int colisao
+  int x;
+  int y;
+  char dir;
+  int offset;
+  int reg;
+  int ativo;
+  int colisao;
 } Sprite;
 
 int16_t X_inicial = 0;
@@ -53,17 +53,18 @@ int mod(int num){
     return mod;
 }
 
-int move_inim(){
+void move_inim(){
     Sprite E1;
     E1.x = 0;
     E1.y = 200;
     E1.dir = 'R';
     E1.offset = 600;
     E1.ativo = 1;
+    E1.reg = 5;
     
-    while(1) {x*
+    while(1) {
     usleep(10000);
-    WBR_SPRITE(5, E1.offset, E1.x, E1.y, E1.ativo);
+    WBR_SPRITE(E1.reg, E1.offset, E1.x, E1.y, E1.ativo);
 
     if (E1.dir == 'R'){
       E1.x ++;
@@ -100,8 +101,13 @@ int main(int argc, char** argv)
     int left, middle, right;
     signed char x, y;
 
-    x = 0;
-    y = 0;
+    Sprite JogadorMouse;
+    JogadorMouse.x = 0;
+    JogadorMouse.y = 0;
+    JogadorMouse.ativo = 1;
+    JogadorMouse.offset = 0;
+    JogadorMouse.reg = 1;
+
     int fd1 = -1;
     int fd2 = -1;
     void *I2C0_virtual;
@@ -168,7 +174,7 @@ int main(int argc, char** argv)
       //WBR_SPRITE(1, 0, x, y, 1);
       }
 
-    WBR_SPRITE(1, 0, ((x*3)+300), ((y*3)+200), 1);   
+    WBR_SPRITE(JogadorMouse.reg, JogadorMouse.offset, ((JogadorMouse.x*3)+300), ((JogadorMouse.y*3)+200), JogadorMouse.ativo);   
 
     }
 
