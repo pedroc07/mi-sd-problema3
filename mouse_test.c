@@ -43,6 +43,30 @@ int mod(int num){
     return mod;
 }
 
+int move_inim(){
+    int inim_x = 0;
+    int inim_y = 200;
+    char inim_dir = 'R';
+    
+    while(1) {
+    usleep(10000);
+    WBR_SPRITE(5, 600, inim_x, inim_y, 1);
+
+    if (inim_dir == 'R'){
+      inim_x ++;
+      if (inim_x == 600){
+        inim_dir = 'L';
+    }
+    }
+    else {
+      inim_x --;
+      if (inim_x == 0){
+        inim_dir = 'R';
+    }
+    }    
+    }
+}
+
 int main(int argc, char** argv)
 {
     int fd, bytes;
@@ -88,8 +112,8 @@ int main(int argc, char** argv)
    I2C0_fs_hcnt = (int *) (I2C0_virtual + 0x1C);
    I2C0_fs_lcnt = (int *) (I2C0_virtual + 0x20);
 
-   //Mapear memória assembly
-   MAP();
+  //Mapear memória assembly
+  MAP();
 
   //Inicializa o controlador I2C e configura a conexao entre o controlador I2C e o acelerometro ADXL345
   I2C0_init();
@@ -103,31 +127,37 @@ int main(int argc, char** argv)
   //Cria o thread de monitoramento do acelerometro, que constantemente atualiza os valores da medicao das inclinacoes X, Y e Z (medida em g referente a forca de aceleracao sentida em cada eixo)
   pthread_t thread_acelerometro;
 
-    if (pthread_create(&thread_acelerometro, NULL, ler_acelerometro, NULL) != 0) {
-            fprintf(stderr, "Erro ao criar a thread do acelerômetro\n");
-            return 1;
+  if (pthread_create(&thread_acelerometro, NULL, ler_acelerometro, NULL) != 0) {
+      fprintf(stderr, "Erro ao criar a thread do acelerômetro\n");
+      return 1;
     }
 
-    while(1)
-    {
+  //Cria thread para movimento do inimigo
+  pthread_t thread_inim;
+  if (pthread_create(&thread_inim, NULL, move_inim, NULL) != 0){
+    fprintf(stderr, "Erro ao criar a thread do acelerômetro\n");
+    return 1;  
+  }
 
-        // Read Mouse     
-        bytes = read(fd, data, sizeof(data));
+  while(1){
+    // Read Mouse     
+    bytes = read(fd, data, sizeof(data));
 
-        if(bytes > 0)
-        {
-            //WBR_SPRITE(1, 0, x, y, 0);
-            left = data[0] & 0x1;
-            right = data[0] & 0x2;
-            middle = data[0] & 0x4;
+    if(bytes > 0){
+      //WBR_SPRITE(1, 0, x, y, 0);
+      left = data[0] & 0x1;
+      right = data[0] & 0x2;
+      middle = data[0] & 0x4;
 
-            x += data[1];
-            y -= data[2];
-            printf("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, left, middle, right);
-            //WBR_SPRITE(1, 0, x, y, 1);
-        }
+      x += data[1];
+      y -= data[2];
+      printf("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, left, middle, right);
+      //WBR_SPRITE(1, 0, x, y, 1);
+      }
 
-        WBR_SPRITE(1, 0, ((x*3)+300), 100, 1);   
+    WBR_SPRITE(1, 0, ((x*3)+300), ((y*3)+200), 1);   
+
     }
-    return 0; 
+
+  return 0; 
 }
