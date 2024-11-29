@@ -4,6 +4,7 @@
 #include "vlib.h"
 //Biblioteca de criacao e gerenciamento de threads para Linux
 #include <pthread.h>
+#include <time.h>
 
 //Biblioteca original de mapeamento da memoria do dispositivo DE1-SoC com Linux embutido
 #include "map.c"inim_dir
@@ -17,6 +18,9 @@ typedef struct{
   int ativo;
   int colisao;
 } Sprite;
+
+Sprite JogadorMouse;
+Sprite E1;
 
 int16_t X_inicial = 0;
 int16_t aceleracaoX = 0;
@@ -54,15 +58,7 @@ int mod(int num){
 }
 
 void move_inim(){
-    Sprite E1;
-    E1.x = 0;
-    E1.y = 200;
-    E1.dir = 'R';
-    E1.offset = 600;
-    E1.ativo = 1;
-    E1.reg = 5;
     
-    while(1) {
     usleep(10000);
     WBR_SPRITE(E1.reg, E1.offset, E1.x, E1.y, E1.ativo);
 
@@ -76,9 +72,53 @@ void move_inim(){
       E1.x --;
       if (E1.x == 0){
         E1.dir = 'R';
+    }  
     }
-    }    
+}
+
+void move_mouse(){
+
+  int left, middle, right;
+
+  int fd, bytes;
+  unsigned char data[3];
+  signed char x, y;
+
+    MAP();
+
+    const char *pDevice = "/dev/input/mice";
+
+    // Open Mouse
+    fd = open(pDevice, O_RDWR);
+    if(fd == -1)
+    {
+        printf("ERROR Opening %s\n", pDevice);
+        return -1;
     }
+
+    JogadorMouse.x = 0;
+    JogadorMouse.y = 0;
+    JogadorMouse.ativo = 1;
+    JogadorMouse.offset = 0;
+    JogadorMouse.reg = 1;
+  while(1){
+  bytes = read(fd, data, sizeof(data));
+
+  if(bytes > 0){
+  //WBR_SPRITE(1, 0, x, y, 0);
+    left = data[0] & 0x1;
+    right = data[0] & 0x2;
+    middle = data[0] & 0x4;
+
+
+    x += (int) data[1];
+    y -= (int) data[2];
+    JogadorMouse.x = ((x*3)+300);
+    JogadorMouse.y = ((y*3)+200);
+    //printf("x=%d, y=%d, left=%d, middle=%d, right=%d\n", JogadorMouse.x, JogadorMouse.y, left, middle, right);
+    WBR_SPRITE(JogadorMouse.reg, JogadorMouse.offset, JogadorMouse.x, JogadorMouse.y, JogadorMouse.ativo);
+    }
+  }
 }
 
 /*Funcao para verificar colisao
@@ -100,6 +140,8 @@ int chk_collision(int xi1, int yi1, int xf1, int yf1, int xi2, int yi2, int xf2,
   int ylen1 = (yf1 - yi1 + 1);
   int ylen2 = (yf2 - yi2 + 1);
 
+  printf("Mousexi: %d, Mouseyi:%d, Mousexf: %d, Mouseyf:%d, Inimxi: %d, Inimyi:%d, Inimxf: %d, Inimyf:%d\n", xi1, yi1, xf1, yf1, xi2, yi2, xf2, yf2);
+
   //Achar o valor minimo de y entre ambas as hitboxes
   if (yi2 < yi1) {
     miny = yi2;
@@ -114,12 +156,6 @@ int chk_collision(int xi1, int yi1, int xf1, int yf1, int xi2, int yi2, int xf2,
   }
   else {
     maxy = yf1;
-  }
-
-  //Verificacao de NAO-sobreposicao no eixo y, ou seja, ver se a distancia entre a ponta de uma hitbox e a ponta oposta da outra e maior ou igual a soma dos comprimentos das hitboxes
-  if ((maxy - miny + 1) >= (ylen1 + ylen2)) {
-    //Se nao houver sobreposicao no eixo y, nao pode haver colisao alguma, retornando 0
-    return 0;
   }
   
   //Repete o processo para o eixo x
@@ -142,41 +178,27 @@ int chk_collision(int xi1, int yi1, int xf1, int yf1, int xi2, int yi2, int xf2,
     maxx = xf1;
   }
 
+  printf("%d\n", (maxy - miny + 1));
+  printf("%d\n", (ylen1 + ylen2));
+  printf("%d\n", (maxx - minx + 1));
+  printf("%d\n", (xlen1 + xlen2));
+
+  //Verificacao de NAO-sobreposicao no eixo y, ou seja, ver se a distancia entre a ponta de uma hitbox e a ponta oposta da outra e maior ou igual a soma dos comprimentos das hitboxes
+  if ((maxy - miny + 1) >= (ylen1 + ylen2)) {
+    //Se nao houver sobreposicao no eixo y, nao pode haver colisao alguma, retornando 0
+    return 1;
+  }
+
   if ((maxx - minx + 1) >= (xlen1 + xlen2)) {
-    return 0;
+    return 1;
   }
 
   //Se nenhum dos teste de NAO-sobreposicao "passou", existe uma colisao
-  return 1;
+  return 0;
 }
 
 int main(int argc, char** argv)
 {
-    int fd, bytes;
-    unsigned char data[3];
-
-    MAP();
-
-    const char *pDevice = "/dev/input/mice";
-
-    // Open Mouse
-    fd = open(pDevice, O_RDWR);
-    if(fd == -1)
-    {
-        printf("ERROR Opening %s\n", pDevice);
-        return -1;
-    }
-
-    int left, middle, right;
-    signed char x, y;
-
-    Sprite JogadorMouse;
-    JogadorMouse.x = 0;
-    JogadorMouse.y = 0;
-    JogadorMouse.ativo = 1;
-    JogadorMouse.offset = 0;
-    JogadorMouse.reg = 1;
-
     int fd1 = -1;
     int fd2 = -1;
     void *I2C0_virtual;
@@ -220,32 +242,27 @@ int main(int argc, char** argv)
       return 1;
     }
 
-  //Cria thread para movimento do inimigo
-  pthread_t thread_inim;
-  if (pthread_create(&thread_inim, NULL, move_inim, NULL) != 0){
-    fprintf(stderr, "Erro ao criar a thread do acelerômetro\n");
+  //Cria thread para movimento do mouse
+  pthread_t thread_mouse;
+  if (pthread_create(&thread_mouse, NULL, move_mouse, NULL) != 0){
+    fprintf(stderr, "Erro ao criar a thread do mouse\n");
     return 1;  
   }
+  JogadorMouse.colisao = 1;
 
-  while(1){
-    // Read Mouse     
-    bytes = read(fd, data, sizeof(data));
-
-    if(bytes > 0){
-      //WBR_SPRITE(1, 0, x, y, 0);
-      left = data[0] & 0x1;
-      right = data[0] & 0x2;
-      middle = data[0] & 0x4;
-
-      x += data[1];
-      y -= data[2];
-      printf("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, left, middle, right);
-      //WBR_SPRITE(1, 0, x, y, 1);
-      }
-
-    WBR_SPRITE(JogadorMouse.reg, JogadorMouse.offset, ((JogadorMouse.x*3)+300), ((JogadorMouse.y*3)+200), JogadorMouse.ativo);   
-
+  E1.x = 0;
+  E1.y = 100;
+  E1.dir = 'R';
+  E1.offset = 600;
+  E1.ativo = 1;
+  E1.reg = 5;
+  while(JogadorMouse.colisao){
+    move_inim();
+    JogadorMouse.colisao = chk_collision(JogadorMouse.x, JogadorMouse.y, 
+                         JogadorMouse.x + 19, JogadorMouse.y +19, E1.x, E1.y, E1.x+19, E1.y + 19);
     }
+    printf("Colisão!");
 
   return 0; 
 }
+
