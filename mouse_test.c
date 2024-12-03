@@ -5,6 +5,7 @@
 //Biblioteca de criacao e gerenciamento de threads para Linux
 #include <pthread.h>
 #include <time.h>
+#include "nave_bola.c"
 
 //Biblioteca original de mapeamento da memoria do dispositivo DE1-SoC com Linux embutido
 #include "map.c"inim_dir
@@ -256,10 +257,11 @@ int main(int argc, char** argv)
   E1.offset = 600;
   E1.ativo = 1;
   E1.reg = 5;
+  desenha_sprite();
   while(JogadorMouse.colisao){
     move_inim();
-    JogadorMouse.colisao = chk_collision(JogadorMouse.x, JogadorMouse.y, 
-                         JogadorMouse.x + 19, JogadorMouse.y +19, E1.x, E1.y, E1.x+19, E1.y + 19);
+    JogadorMouse.colisao = chk_collision(JogadorMouse.x+1, JogadorMouse.y+1, 
+                         JogadorMouse.x-1 + 19, JogadorMouse.y-1 +19, E1.x, E1.y, E1.x+19, E1.y + 19);
     }
     printf("Colisão!");
 
