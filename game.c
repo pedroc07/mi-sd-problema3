@@ -53,63 +53,63 @@ xf2 = maior posicao x da hitbox 2
 yf2 = maior posicao y da hitbox 2
 */
 int chk_collision(int xi1, int yi1, int xf1, int yf1, int xi2, int yi2, int xf2, int yf2) {
-  //Primeiro fazemos a checagem no eixo y, visto que por se tratar de um top-down shooter, as colisoes tem chance maior de ocorrer enquanto movendo no eixo y
-  int miny;
-  int maxy;
-  //Calcular o comprimento y de cada hitbox
-  int ylen1 = (yf1 - yi1 + 1);
-  int ylen2 = (yf2 - yi2 + 1);
+    //Primeiro fazemos a checagem no eixo y, visto que por se tratar de um top-down shooter, as colisoes tem chance maior de ocorrer enquanto movendo no eixo y
+    int miny;
+    int maxy;
+    //Calcular o comprimento y de cada hitbox
+    int ylen1 = (yf1 - yi1 + 1);
+    int ylen2 = (yf2 - yi2 + 1);
 
-  printf("Mousexi: %d, Mouseyi:%d, Mousexf: %d, Mouseyf:%d, Inimxi: %d, Inimyi:%d, Inimxf: %d, Inimyf:%d\n", xi1, yi1, xf1, yf1, xi2, yi2, xf2, yf2);
+    printf("Mousexi: %d, Mouseyi:%d, Mousexf: %d, Mouseyf:%d, Inimxi: %d, Inimyi:%d, Inimxf: %d, Inimyf:%d\n", xi1, yi1, xf1, yf1, xi2, yi2, xf2, yf2);
 
-  //Achar o valor minimo de y entre ambas as hitboxes
-  if (yi2 < yi1) {
-    miny = yi2;
-  }
-  else {
-    miny = yi1;
-  }
+    //Achar o valor minimo de y entre ambas as hitboxes
+    if (yi2 < yi1) {
+        miny = yi2;
+    }
+    else {
+        miny = yi1;
+    }
 
-  //Achar o valor maximo de y entre ambas as hitboxes
-  if (yf2 > yf1) {
-    maxy = yf2;
-  }
-  else {
-    maxy = yf1;
-  }
+    //Achar o valor maximo de y entre ambas as hitboxes
+    if (yf2 > yf1) {
+        maxy = yf2;
+    }
+    else {
+        maxy = yf1;
+    }
 
-  //Verificacao de NAO-sobreposicao no eixo y, ou seja, ver se a distancia entre a ponta de uma hitbox e a ponta oposta da outra e maior ou igual a soma dos comprimentos das hitboxes
-  if ((maxy - miny + 1) >= (ylen1 + ylen2)) {
-    //Se nao houver sobreposicao no eixo y, nao pode haver colisao alguma, retornando 0
-    return 1;
-  }
-  
-  //Repete o processo para o eixo x
-  int minx;
-  int maxx;
-  int xlen1 = (xf1 - xi1 + 1);
-  int xlen2 = (xf2 - xi2 + 1);
+    //Verificacao de NAO-sobreposicao no eixo y, ou seja, ver se a distancia entre a ponta de uma hitbox e a ponta oposta da outra e maior ou igual a soma dos comprimentos das hitboxes
+    if ((maxy - miny + 1) >= (ylen1 + ylen2)) {
+        //Se nao houver sobreposicao no eixo y, nao pode haver colisao alguma, retornando 0
+        return 1;
+    }
 
-  if (xi2 < xi1) {
-    minx = xi2;
-  }
-  else {
-    minx = xi1;
-  }
+    //Repete o processo para o eixo x
+    int minx;
+    int maxx;
+    int xlen1 = (xf1 - xi1 + 1);
+    int xlen2 = (xf2 - xi2 + 1);
 
-  if (xf2 > xf1) {
-    maxx = xf2;
-  }
-  else {
-    maxx = xf1;
-  }
+    if (xi2 < xi1) {
+        minx = xi2;
+    }
+    else {
+        minx = xi1;
+    }
 
-  if ((maxx - minx + 1) >= (xlen1 + xlen2)) {
-    return 1;
-  }
+    if (xf2 > xf1) {
+        maxx = xf2;
+    }
+    else {
+        maxx = xf1;
+    }
 
-  //Se nenhum dos teste de NAO-sobreposicao "passou", existe uma colisao
-  return 0;
+    if ((maxx - minx + 1) >= (xlen1 + xlen2)) {
+        return 1;
+    }
+
+    //Se nenhum dos teste de NAO-sobreposicao "passou", existe uma colisao
+    return 0;
 }
 
 // Função para ler o acelerômetro em uma thread e atualizar a posicao do jogador 1
