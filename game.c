@@ -9,6 +9,8 @@
 //Biblioteca original de mapeamento da memoria do dispositivo DE1-SoC com Linux embutido
 #include "map.c"
 
+#include "nave_bola.c"
+
 typedef struct {
     int reg;                //Numero do registrador, valores abaixo de 1 resultam no nao-desenho do sprite
     int spriteoffset;       //Offset do sprite
@@ -60,8 +62,6 @@ int chk_collision(int xi1, int yi1, int xf1, int yf1, int xi2, int yi2, int xf2,
     int ylen1 = (yf1 - yi1 + 1);
     int ylen2 = (yf2 - yi2 + 1);
 
-    printf("Mousexi: %d, Mouseyi:%d, Mousexf: %d, Mouseyf:%d, Inimxi: %d, Inimyi:%d, Inimxf: %d, Inimyf:%d\n", xi1, yi1, xf1, yf1, xi2, yi2, xf2, yf2);
-
     //Achar o valor minimo de y entre ambas as hitboxes
     if (yi2 < yi1) {
         miny = yi2;
@@ -112,39 +112,95 @@ int chk_collision(int xi1, int yi1, int xf1, int yf1, int xi2, int yi2, int xf2,
     return 0;
 }
 
+int mod(int num){
+    if (num < 0){
+      num = num *-1;
+    }
+    return num;
+}
+
+int intervalsOfTen(int value) {
+    
+    if (value < 10) {
+        return 0;
+    }
+    else if (value < 20) {
+        return 10;
+    }
+    else if (value < 30) {
+        return 20;
+    }
+    else if (value < 40) {
+        return 30;
+    }
+    else if (value < 50) {
+        return 40;
+    }
+    else if (value < 60) {
+        return 50;
+    }
+    else if (value < 70) {
+        return 60;
+    }
+    else if (value < 80) {
+        return 70;
+    }
+    else {
+        return 80;
+    }
+}
+
+
 // Função para ler o acelerômetro em uma thread e atualizar a posicao do jogador 1
 void* ler_acelerometro(void* arg) {
     int16_t aceleracaoX;
     int16_t aceleracaoY;
     int16_t aceleracaoZ;
     int16_t XYZ[3];
+
+    int movCountX = 0;
+    int movCountY = 0;
     
     while (1) {
-      ADXL345_XYZ_Read(XYZ);
-      aceleracaoX = XYZ[0];
-      aceleracaoY = XYZ[1];
-      aceleracaoZ = XYZ[2];
 
-      int wasPosChanged = 0;
+        ADXL345_XYZ_Read(XYZ);
+        aceleracaoX = XYZ[0];
+        aceleracaoY = XYZ[1];
+        aceleracaoZ = XYZ[2];
 
-        if (player2.xpos != (aceleracaoX + 20)) {
-            player2.xpos = (aceleracaoX + 20);
+        printf("AX: %d, AY: %d, AZ: %d\n", aceleracaoX, aceleracaoY, aceleracaoZ);
+
+        int wasPosChanged = 0;
+        
+        movCountX += mod(intervalsOfTen(aceleracaoX));
+        movCountY += mod(intervalsOfTen(aceleracaoY));
+
+        printf("ITX: %d, ITY: %d\n", (intervalsOfTen(aceleracaoX)), (intervalsOfTen(aceleracaoY)));
+
+
+        if (movCountX >= 80) {
+            player1.xpos += ((aceleracaoX / mod(aceleracaoX)) * 5);
             wasPosChanged = 1;
+            movCountX = 0;
+            //printf("MCX: %d\n", movCountX);
         }
 
-        if (player2.ypos != (aceleracaoY + 20)) {
-            player2.ypos = (aceleracaoY + 20);
+        if (movCountY >= 80) {
+            player1.ypos += ((aceleracaoY / mod(aceleracaoY)) * 5);
             wasPosChanged = 1;
+            movCountY = 0;
+            //printf("MCY: %d\n", movCountY);
         }
 
         if (wasPosChanged == 1) {
             printList[0] = 1;
+            int objCount;
 
-            for (int objCount = 0; objCount < 4; objCount++) {
+            for (objCount = 0; objCount < 4; objCount++) {
                 Object actualEnemy = enemyList[objCount];
 
-                if (chk_collision((player2.xpos + player2.xStart), (player2.ypos + player2.yStart),
-                (player2.xpos + player2.xEnd), (player2.ypos + player2.yEnd),
+                if (chk_collision((player1.xpos + player1.xStart), (player1.ypos + player1.yStart),
+                (player1.xpos + player1.xEnd), (player1.ypos + player1.yEnd),
                 (actualEnemy.xpos + actualEnemy.xStart), (actualEnemy.ypos + actualEnemy.yStart),
                 (actualEnemy.xpos + actualEnemy.xEnd), (actualEnemy.ypos + actualEnemy.yEnd)) == 0) {
                     player1.status = 1;
@@ -152,7 +208,7 @@ void* ler_acelerometro(void* arg) {
             }
         }
 
-        usleep(100000);
+        usleep(6250);
     }
     return NULL;
 }
@@ -204,8 +260,9 @@ void* ler_mouse(void* arg){
 
             if (wasPosChanged == 1) {
                 printList[1] = 1;
+                int objCount;
 
-                for (int objCount = 0; objCount < 4; objCount++) {
+                for (objCount = 0; objCount < 4; objCount++) {
                     Object actualEnemy = enemyList[objCount];
 
                     if (chk_collision((player2.xpos + player2.xStart), (player2.ypos + player2.yStart),
@@ -222,46 +279,52 @@ void* ler_mouse(void* arg){
 
 // Função para exibir os objetos do jogo
 void* printar_Objetos(void* arg) {
+    
+    while(1) {
+        
+        int printCount;
 
-    for(int printCount = 0; printCount< 12; printCount++) {
+        for(printCount = 0; printCount< 12; printCount++) {
 
-        if (printList[printCount] == 1) {
+            if (printList[printCount] == 1) {
+                int elementCount;
 
-            for (int elementCount = 0; elementCount < 4; elementCount++) {
-                Sprite actualSprite;
-                Polygon actualPolygon;
-                int xbase;
-                int ybase;
+                for (elementCount = 0; elementCount < 4; elementCount++) {
+                    Sprite actualSprite;
+                    Polygon actualPolygon;
+                    int xbase;
+                    int ybase;
 
-                if(printCount == 0) {
-                    actualSprite = (player1.spriteList)[elementCount];
-                    actualPolygon = (player1.polygonList)[elementCount];
-                    xbase = player1.xpos;
-                    ybase = player1.ypos;
+                    if(printCount == 0) {
+                        actualSprite = (player1.spriteList)[elementCount];
+                        actualPolygon = (player1.polygonList)[elementCount];
+                        xbase = player1.xpos;
+                        ybase = player1.ypos;
+                    }
+                    else if(printCount == 1) {
+                        actualSprite = (player2.spriteList)[elementCount];
+                        actualPolygon = (player2.polygonList)[elementCount];
+                        xbase = player2.xpos;
+                        ybase = player2.ypos;
+                    }
+                    else if((printCount >= 2) && (printCount <= 5)) {
+                        actualSprite = ((enemyList[(printCount - 2)]).spriteList)[elementCount];
+                        actualPolygon = ((enemyList[(printCount - 2)]).polygonList)[elementCount];
+                        xbase = (enemyList[(printCount - 2)]).xpos;
+                        ybase = (enemyList[(printCount - 2)]).ypos;
+                    }
+
+                    if(actualSprite.reg >= 1) {
+                        WBR_SPRITE(actualSprite.reg, actualSprite.spriteoffset, (xbase + actualSprite.xoffset), (ybase + actualSprite.yoffset), 1);
+                    }
+
+                    if(actualPolygon.size >= 1) {
+                        DP((xbase + actualPolygon.xoffset), (ybase + actualPolygon.yoffset), actualPolygon.color, actualPolygon.shape, actualPolygon.size);
+                    }
                 }
-                else if(printCount == 1) {
-                    actualSprite = (player2.spriteList)[elementCount];
-                    actualPolygon = (player2.polygonList)[elementCount];
-                    xbase = player2.xpos;
-                    ybase = player2.ypos;
-                }
-                else if((printCount >= 2) && (printCount <= 5)) {
-                    actualSprite = ((enemyList[(printCount - 2)]).spriteList)[elementCount];
-                    actualPolygon = ((enemyList[(printCount - 2)]).polygonList)[elementCount];
-                    xbase = (enemyList[(printCount - 2)]).xpos;
-                    ybase = (enemyList[(printCount - 2)]).ypos;
-                }
 
-                if(actualSprite.reg >= 1) {
-                    WBR_SPRITE(actualSprite.reg, actualSprite.spriteoffset, (xbase + actualSprite.xoffset), (ybase + actualSprite.yoffset), 1);
-                }
-
-                if(actualPolygon.size >= 1) {
-                    DP((xbase + actualPolygon.xoffset), (ybase + actualPolygon.yoffset), actualPolygon.color, actualPolygon.shape, actualPolygon.size);
-                }
+                printList[printCount] = 0;
             }
-
-            printList[printCount] = 0;
         }
     }
 }
@@ -293,6 +356,9 @@ int main(int argc, char** argv) {
     //Mapear memória assembly
     MAP();
 
+    //Carrega os sprites para a memoria
+    desenha_sprite();
+
     //Inicializa o controlador I2C e configura a conexao entre o controlador I2C e o acelerometro ADXL345
     I2C0_init();
 
@@ -310,14 +376,25 @@ int main(int argc, char** argv) {
     player1.xEnd = 19;
     player1.yEnd = 19;
     player1.status = 0;
-    player1.spriteList[0].reg = -1;
+
+    player1.spriteList[0].reg = 1;
+    player1.spriteList[0].spriteoffset = 0;
+    player1.spriteList[0].xoffset = 0;
+    player1.spriteList[0].yoffset = 0;
+    
     player1.spriteList[1].reg = -1;
+    
     player1.spriteList[2].reg = -1;
+    
     player1.spriteList[3].reg = -1;
-    player1.polygonList[0].reg = -1;
-    player1.polygonList[1].reg = -1;
-    player1.polygonList[2].reg = -1;
-    player1.polygonList[3].reg = -1;
+    
+    player1.polygonList[0].size = -1;
+    
+    player1.polygonList[1].size = -1;
+    
+    player1.polygonList[2].size = -1;
+    
+    player1.polygonList[3].size = -1;
 
     //Cria thread para monitoramento do acelerometro e controle do jogador 1
     pthread_t thread_acelerometro;
@@ -335,14 +412,25 @@ int main(int argc, char** argv) {
     player2.xEnd = 19;
     player2.yEnd = 19;
     player2.status = 0;
-    player2.spriteList[0].reg = -1;
+
+    player2.spriteList[0].reg = 3;
+    player2.spriteList[0].spriteoffset = 1;
+    player2.spriteList[0].xoffset = 0;
+    player2.spriteList[0].yoffset = 0;
+
     player2.spriteList[1].reg = -1;
+    
     player2.spriteList[2].reg = -1;
+    
     player2.spriteList[3].reg = -1;
-    player2.polygonList[0].reg = -1;
-    player2.polygonList[1].reg = -1;
-    player2.polygonList[2].reg = -1;
-    player2.polygonList[3].reg = -1;
+    
+    player2.polygonList[0].size = -1;
+    
+    player2.polygonList[1].size = -1;
+    
+    player2.polygonList[2].size = -1;
+    
+    player2.polygonList[3].size = -1;
 
     //Cria thread para monitoramento do mouse e controle do jogador 2
     pthread_t thread_mouse;
@@ -351,4 +439,14 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Erro ao criar a thread do mouse\n");
         return 1;
     }
+
+    pthread_t thread_renderizar;
+
+    if(pthread_create(&thread_renderizar, NULL, printar_Objetos, NULL) != 0){
+        fprintf(stderr ,"Erro ao criar thread de renderização");
+        return 1;
+    }
+
+    while(1) {}
+
 }
