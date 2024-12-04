@@ -224,9 +224,8 @@ void* ler_mouse(void* arg){
 void* printar_Objetos(void* arg) {
 
     for(int printCount = 0; printCount< 12; printCount++) {
-        int printVar = printList[printCount];
 
-        if (printVar == 1) {
+        if (printList[printCount] == 1) {
 
             for (int elementCount = 0; elementCount < 4; elementCount++) {
                 Sprite actualSprite;
@@ -261,6 +260,8 @@ void* printar_Objetos(void* arg) {
                     DP((xbase + actualPolygon.xoffset), (ybase + actualPolygon.yoffset), actualPolygon.color, actualPolygon.shape, actualPolygon.size);
                 }
             }
+
+            printList[printCount] = 0;
         }
     }
 }
@@ -301,6 +302,23 @@ int main(int argc, char** argv) {
     //Calibra o acelerometro
     ADXL345_Calibrate();
 
+    //Valores iniciais do jogador 1
+    player1.xpos = 0;
+    player1.ypos = 0;
+    player1.xStart = 0;
+    player1.yStart = 0;
+    player1.xEnd = 19;
+    player1.yEnd = 19;
+    player1.status = 0;
+    player1.spriteList[0].reg = -1;
+    player1.spriteList[1].reg = -1;
+    player1.spriteList[2].reg = -1;
+    player1.spriteList[3].reg = -1;
+    player1.polygonList[0].reg = -1;
+    player1.polygonList[1].reg = -1;
+    player1.polygonList[2].reg = -1;
+    player1.polygonList[3].reg = -1;
+
     //Cria thread para monitoramento do acelerometro e controle do jogador 1
     pthread_t thread_acelerometro;
 
@@ -317,7 +335,14 @@ int main(int argc, char** argv) {
     player2.xEnd = 19;
     player2.yEnd = 19;
     player2.status = 0;
-    player2.spriteList[0]
+    player2.spriteList[0].reg = -1;
+    player2.spriteList[1].reg = -1;
+    player2.spriteList[2].reg = -1;
+    player2.spriteList[3].reg = -1;
+    player2.polygonList[0].reg = -1;
+    player2.polygonList[1].reg = -1;
+    player2.polygonList[2].reg = -1;
+    player2.polygonList[3].reg = -1;
 
     //Cria thread para monitoramento do mouse e controle do jogador 2
     pthread_t thread_mouse;
