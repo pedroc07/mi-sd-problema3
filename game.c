@@ -125,71 +125,98 @@ int intervalsOfTen(int value) {
         return 0;
     }
     else if (value < 20) {
-        return 10;
+        return 1;
     }
     else if (value < 30) {
-        return 20;
+        return 2;
     }
     else if (value < 40) {
-        return 30;
+        return 3;
     }
     else if (value < 50) {
-        return 40;
+        return 4;
     }
     else if (value < 60) {
-        return 50;
+        return 5;
     }
     else if (value < 70) {
-        return 60;
+        return 6;
     }
     else if (value < 80) {
-        return 70;
+        return 7;
     }
     else {
-        return 80;
+        return 8;
     }
 }
 
 
 // Função para ler o acelerômetro em uma thread e atualizar a posicao do jogador 1
 void* ler_acelerometro(void* arg) {
+    int16_t XYZ[3];
     int16_t aceleracaoX;
     int16_t aceleracaoY;
-    int16_t aceleracaoZ;
-    int16_t XYZ[3];
+    //int16_t aceleracaoZ;
 
     int movCountX = 0;
     int movCountY = 0;
     
+    int initialCount;
+    int sum16X = 0;
+    int sum16Y = 0;
+    
+    //Jogar os 8 valores de medicao iniciais fora
+    for(initialCount = 0; initialCount < 8; initialCount++) {
+        usleep(25000);
+        ADXL345_XYZ_Read(XYZ);
+    }
+
+    //Somar os proximos 16 valores de medicao
+    for(initialCount = 0; initialCount < 16; initialCount++) {
+        usleep(25000);
+        ADXL345_XYZ_Read(XYZ);
+        sum16X += XYZ[0];
+        sum16Y += XYZ[1];
+    }
+
+    //Achar a media dos valores de medicao para definir como parametros iniciais
+    int initialX = (sum16X / 16);
+    int initialY = (sum16Y / 16);
+
+    printf("INX: %d, INY: %d\n", initialX, initialY);
+        
     while (1) {
 
         ADXL345_XYZ_Read(XYZ);
-        aceleracaoX = XYZ[0];
-        aceleracaoY = XYZ[1];
-        aceleracaoZ = XYZ[2];
-
-        printf("AX: %d, AY: %d, AZ: %d\n", aceleracaoX, aceleracaoY, aceleracaoZ);
+        aceleracaoX = (XYZ[0] - initialX);
+        aceleracaoY = (XYZ[1] - initialY);
+        //aceleracaoZ = XYZ[2];
 
         int wasPosChanged = 0;
         
-        movCountX += mod(intervalsOfTen(aceleracaoX));
-        movCountY += mod(intervalsOfTen(aceleracaoY));
+        movCountX += intervalsOfTen(mod(aceleracaoX));
+        movCountY += intervalsOfTen(mod(aceleracaoY));
 
-        printf("ITX: %d, ITY: %d\n", (intervalsOfTen(aceleracaoX)), (intervalsOfTen(aceleracaoY)));
-
-
-        if (movCountX >= 80) {
-            player1.xpos += ((aceleracaoX / mod(aceleracaoX)) * 5);
-            wasPosChanged = 1;
-            movCountX = 0;
-            //printf("MCX: %d\n", movCountX);
+        if (movCountX >= 8) {
+            int newxpos = (player1.xpos + (aceleracaoX / mod(aceleracaoX)));
+            
+            if((newxpos >= 170) && (newxpos < 450)) {
+                player1.xpos = newxpos;
+                wasPosChanged = 1;
+            }
+            
+            movCountX -= 8;
         }
 
-        if (movCountY >= 80) {
-            player1.ypos += ((aceleracaoY / mod(aceleracaoY)) * 5);
-            wasPosChanged = 1;
-            movCountY = 0;
-            //printf("MCY: %d\n", movCountY);
+        if (movCountY >= 8) {
+            int newypos = (player1.ypos - (aceleracaoY / mod(aceleracaoY)));
+            
+            if((newypos >= 40) && (newypos < 420)) {
+                player1.ypos = newypos;
+                wasPosChanged = 1;
+            }
+            
+            movCountY -= 8;
         }
 
         if (wasPosChanged == 1) {
@@ -208,7 +235,7 @@ void* ler_acelerometro(void* arg) {
             }
         }
 
-        usleep(6250);
+        usleep(1500);
     }
     return NULL;
 }
@@ -244,18 +271,34 @@ void* ler_mouse(void* arg){
             right = data[0] & 0x2;
             middle = data[0] & 0x4;
 
+            int xvector = ((int) data[1]);
+            int yvector = ((int) data[2]);
 
-            x += (int) data[1];
-            y -= (int) data[2];
-
-            if (player2.xpos != ((x*3)+300)) {
-                player2.xpos = ((x*3)+300);
-                wasPosChanged = 1;
+            if(xvector >= 128) {
+                xvector = (-255 + xvector);
             }
 
-            if (player2.ypos != ((y*3)+200)) {
-                player2.ypos = ((y*3)+200);
-                wasPosChanged = 1;
+            if(yvector >= 128) {
+                yvector = (-255 + yvector);
+            }
+
+            int newxpos = (player2.xpos + xvector);
+            int newypos = (player2.ypos - yvector);
+
+            if (player2.xpos != newxpos) {
+
+                if((newxpos >= 170) && (newxpos < 450)) {
+                    player2.xpos = newxpos;
+                    wasPosChanged = 1;
+                }
+            }
+
+            if (player2.ypos != (y*3)) {
+
+                if((newypos >= 40) && (newypos < 420)) {
+                    player2.ypos = newypos;
+                    wasPosChanged = 1;
+                }
             }
 
             if (wasPosChanged == 1) {
@@ -369,8 +412,10 @@ int main(int argc, char** argv) {
     ADXL345_Calibrate();
 
     //Valores iniciais do jogador 1
-    player1.xpos = 0;
-    player1.ypos = 0;
+    printList[0] = 1;
+
+    player1.xpos = 260;
+    player1.ypos = 260;
     player1.xStart = 0;
     player1.yStart = 0;
     player1.xEnd = 19;
@@ -405,8 +450,10 @@ int main(int argc, char** argv) {
     }
     
     //Valores iniciais do jogador 2
-    player2.xpos = 0;
-    player2.ypos = 0;
+    printList[1] = 1;
+    
+    player2.xpos = 320;
+    player2.ypos = 260;
     player2.xStart = 0;
     player2.yStart = 0;
     player2.xEnd = 19;
