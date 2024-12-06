@@ -124,7 +124,7 @@ int mod(int num){
 
 //Funcao para achar o indice do intervalo de tamanho 10 ao qual um valor igual ou maior que 0 pertence
 int intervalsOfTen(int value) {
-    
+
     if (value < 10) {
         return 0;
     }
@@ -165,12 +165,12 @@ void* ler_acelerometro(void* arg) {
     //Contador de movimento nos eixos X e Y
     int movCountX = 0;
     int movCountY = 0;
-    
+
     //Contador das medicoes iniciais do acelerometro e somas dos valores iniciais
     int initialCount;
     int sum16X = 0;
     int sum16Y = 0;
-    
+
     //Jogar os 8 valores de medicao iniciais fora
     for(initialCount = 0; initialCount < 8; initialCount++) {
         usleep(25000);
@@ -190,7 +190,7 @@ void* ler_acelerometro(void* arg) {
     int initialY = (sum16Y / 16);
 
     printf("INX: %d, INY: %d\n", initialX, initialY);
-        
+
     while (1) {
 
         if(appState == 0) {
@@ -203,11 +203,10 @@ void* ler_acelerometro(void* arg) {
 
             //Variavel para determinar se houve movimento
             int wasPosChanged = 0;
-            
+
             //Contador de movimento sobe a cada ciclo de medicao de acordo com a inclinacao do acelerometro nos eixos X e Y
             movCountX += intervalsOfTen(mod(aceleracaoX));
             movCountY += intervalsOfTen(mod(aceleracaoY));
-
             //Contador de movimento no eixo X chega a 8
             if (movCountX >= 8) {
                 int newxpos = (player1.xpos + (aceleracaoX / mod(aceleracaoX)));
@@ -267,36 +266,32 @@ void* ler_mouse(void* arg){
 
     // Open Mouse
     fd = open(pDevice, O_RDWR);
-    
+
     if(fd == -1) {
         printf("ERROR Opening %s\n", pDevice);
         return -1;
     }
-
     //Dados do mouse
     unsigned char data[3];
     signed char x, y;
     int left, middle, right;
-    
+
     while(1) {
 
         if (appState == 0) {
-            
+
             //Le o mouse
             bytes = read(fd, data, sizeof(data));
             int wasPosChanged = 0;
-
             if(bytes > 0){
                 
                 //Dados dos botoes
                 left = data[0] & 0x1;
                 right = data[0] & 0x2;
                 middle = data[0] & 0x4;
-
                 //Separa nos vetores
                 int xvector = ((int) data[1]);
                 int yvector = ((int) data[2]);
-
                 //Valores unsigned acima de 127 sao negativos (ate 255)
                 if(xvector >= 128) {
                     xvector = (-255 + xvector);
@@ -310,7 +305,6 @@ void* ler_mouse(void* arg){
                 //Acha as novas posicoes apos o movimento
                 int newxpos = (player2.xpos + xvector);
                 int newypos = (player2.ypos - yvector);
-
                 //Tenta fazer o movimento no eixo X
                 if (player2.xpos != newxpos) {
                     
@@ -336,11 +330,9 @@ void* ler_mouse(void* arg){
                     //Pede para exibir o objeto na nova posicao ao registrar na lista
                     printList[1] = 1;
                     int objCount;
-
                     //Verifica se houve colisao com objeto "inimigo"
                     for (objCount = 0; objCount < 4; objCount++) {
                         Object actualEnemy = enemyList[objCount];
-
                         if (chk_collision((player2.xpos + player2.xStart), (player2.ypos + player2.yStart),
                         (player2.xpos + player2.xEnd), (player2.ypos + player2.yEnd),
                         (actualEnemy.xpos + actualEnemy.xStart), (actualEnemy.ypos + actualEnemy.yStart),
@@ -356,9 +348,9 @@ void* ler_mouse(void* arg){
 
 // Função para exibir os objetos do jogo
 void* printar_objetos(void* arg) {
-    
+
     while(1) {
-        
+
         int printCount;
 
         for(printCount = 0; printCount< 12; printCount++) {
@@ -400,12 +392,10 @@ void* printar_objetos(void* arg) {
                     if(actualSprite.reg >= 1) {
                         //Numero sp do sprite inicialmente 0, que desativa
                         int spriteSp = 0;
-
                         //Porem, caso o jogo esteja em execucao, muda para 1, ativando
                         if(appState == 0) {
                             spriteSp = 1;
                         }
-
                         //Envia comando de "escrever" sprite
                         WBR_SPRITE(actualSprite.reg, actualSprite.spriteoffset, (xbase + actualSprite.xoffset), (ybase + actualSprite.yoffset), spriteSp);
                     }
@@ -434,40 +424,62 @@ void* printar_objetos(void* arg) {
 void* monitorar_jogo(void* arg) {
     
     while(1) {
+        //printf("AS: %d\n", appState);
 
         //Se o valor do botao e 1, encerramos o jogo
         if (btnValue == 1) {
             appState = 4;
+
+            printList[0] = 1;
+            printList[1] = 1;
         }
         //Se o valor do botao e 2, reiniciamos o jogo
         else if (btnValue == 2) {
             appState = 3;
 
+            printList[0] = 1;
+            printList[1] = 1;
+
             //Espera 400 milissegundos antes de continuar a thread (debouncing e "cooldown")
             usleep(400000);
             
             //Apos isso, segura tambem enquanto o botao nao for solto (nao permite ativacao seguida por manter pressionado)
             while (btnValue != 0) { }
-
             //Espera 100 milissegundos antes de continuar a thread (debouncing)
             usleep(100000);
         }
-        //Se o valor do botao e 4, pausamos o jogo
-        else if (btnValue == 4) {
+        //Se o valor do botao e 4 e o estado e 0, pausamos o jogo
+        else if ((btnValue == 4) && (appState == 0)) {
             appState = 1;
+
+            printList[0] = 1;
+            printList[1] = 1;
 
             //Espera 400 milissegundos antes de continuar a thread (debouncing e "cooldown")
             usleep(400000);
             
             //Apos isso, segura tambem enquanto o botao nao for solto (nao permite ativacao seguida por manter pressionado)
             while (btnValue != 0) { }
+            //Espera 100 milissegundos antes de continuar a thread (debouncing)
+            usleep(100000);
+        }
+        //Se o valor do botao e 4 e o estado e 0, pausamos o jogo
+        else if ((btnValue == 4) && (appState == 1)) {
+            appState = 0;
 
+            printList[0] = 1;
+            printList[1] = 1;
+
+            //Espera 400 milissegundos antes de continuar a thread (debouncing e "cooldown")
+            usleep(400000);
+            
+            //Apos isso, segura tambem enquanto o botao nao for solto (nao permite ativacao seguida por manter pressionado)
+            while (btnValue != 0) { }
             //Espera 100 milissegundos antes de continuar a thread (debouncing)
             usleep(100000);
         }
     }
 }
-
 int main(int argc, char** argv) {
     int fd1 = -1;
     int fd2 = -1;
@@ -475,7 +487,6 @@ int main(int argc, char** argv) {
     int16_t XYZ[3];
 
     int isFirstRun = 1;
-
     // Abrir /dev/mem e mapear a área de memória do I2C e do SYSMGR
     if ((fd1 = open_physical(fd1)) == -1)
         return (-1);
@@ -519,19 +530,19 @@ int main(int argc, char** argv) {
     player1.spriteList[0].spriteoffset = 0;
     player1.spriteList[0].xoffset = 0;
     player1.spriteList[0].yoffset = 0;
-    
+
     player1.spriteList[1].reg = -1;
-    
+
     player1.spriteList[2].reg = -1;
-    
+
     player1.spriteList[3].reg = -1;
-    
+
     player1.polygonList[0].size = -1;
-    
+
     player1.polygonList[1].size = -1;
-    
+
     player1.polygonList[2].size = -1;
-    
+
     player1.polygonList[3].size = -1;
 
     //Valores fixos de objeto do jogador 2
@@ -546,17 +557,17 @@ int main(int argc, char** argv) {
     player2.spriteList[0].yoffset = 0;
 
     player2.spriteList[1].reg = -1;
-    
+
     player2.spriteList[2].reg = -1;
-    
+
     player2.spriteList[3].reg = -1;
-    
+
     player2.polygonList[0].size = -1;
-    
+
     player2.polygonList[1].size = -1;
-    
+
     player2.polygonList[2].size = -1;
-    
+
     player2.polygonList[3].size = -1;
     
     while(appState != 4) {
@@ -587,20 +598,16 @@ int main(int argc, char** argv) {
 
             //Cria thread para monitoramento do acelerometro e controle do jogador 1
             pthread_t thread_acelerometro;
-
             if (pthread_create(&thread_acelerometro, NULL, ler_acelerometro, NULL) != 0) {
                 fprintf(stderr, "Erro ao criar a thread do acelerômetro\n");
                 return 1;
             }
-
             //Cria thread para monitoramento do mouse e controle do jogador 2
             pthread_t thread_mouse;
-
             if (pthread_create(&thread_mouse, NULL, ler_mouse, NULL) != 0){
                 fprintf(stderr, "Erro ao criar a thread do mouse\n");
                 return 1;
             }
-
             //Cria a thread de renderizacao
             pthread_t thread_renderizar;
 
@@ -609,15 +616,15 @@ int main(int argc, char** argv) {
                 return 1;
             }
         }
-
         //Loop principal que le os botoes para controle do jogo
         while(appState != 3 && appState != 4) {
-            btnValue = RDBT;
+            btnValue = RDBT();
         }
+
+        //Volta o estado para "pausa"
+        appState = 1;
 
         //Atualiza variavel de primeira execucao
         isFirstRun = 0;
     }
-
-    appState = 1;
 }
