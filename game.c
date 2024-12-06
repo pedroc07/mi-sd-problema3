@@ -10,6 +10,7 @@
 #include "map.c"
 
 #include "nave_bola.c"
+#include "nave_pinguim.c"
 
 typedef struct {
     int reg;                //Numero do registrador, valores abaixo de 1 resultam no nao-desenho do sprite
@@ -480,6 +481,30 @@ void* monitorar_jogo(void* arg) {
         }
     }
 }
+
+void move_inim(){
+
+    char dir = 'R';
+    
+    while(1){
+    usleep(10000);
+    if (dir == 'R'){
+      enemyList[0].xpos ++;
+      printList[2] = 1;
+      if (enemyList[0].xpos == 450){
+        dir = 'L';
+    }
+    }
+    else {
+      enemyList[0].xpos --;
+      printList[2] = 1;
+      if (enemyList[0].xpos == 170){
+        dir = 'R';
+    }  
+    }
+    }
+}
+
 int main(int argc, char** argv) {
     int fd1 = -1;
     int fd2 = -1;
@@ -510,6 +535,7 @@ int main(int argc, char** argv) {
 
     //Carrega os sprites para a memoria
     desenha_sprite();
+    desenha_sprite_ps2();
 
     //Inicializa o controlador I2C e configura a conexao entre o controlador I2C e o acelerometro ADXL345
     I2C0_init();
@@ -569,6 +595,31 @@ int main(int argc, char** argv) {
     player2.polygonList[2].size = -1;
 
     player2.polygonList[3].size = -1;
+
+    //Valores do inimigo
+    enemyList[0].xpos = 200;
+    enemyList[0].ypos = 200;
+    enemyList[0].xStart = 0;
+    enemyList[0].yStart = 0;
+    enemyList[0].xEnd = 19;
+    enemyList[0].yEnd = 19;
+    enemyList[0].status = 0;
+
+    enemyList[0].spriteList[0].reg = 5;
+    enemyList[0].spriteList[0].spriteoffset = 2;
+    enemyList[0].spriteList[0].xoffset = 0;
+    enemyList[0].spriteList[0].yoffset = 0;
+
+    enemyList[0].spriteList[1].reg = -1;
+    enemyList[0].spriteList[2].reg = -1;
+    enemyList[0].spriteList[3].reg = -1;
+
+    enemyList[0].polygonList[0].size = -1;
+    enemyList[0].polygonList[1].size = -1;
+    enemyList[0].polygonList[2].size = -1;
+    enemyList[0].polygonList[3].size = -1;
+
+    printList[2] = 1;
     
     while(appState != 4) {
         
@@ -588,6 +639,13 @@ int main(int argc, char** argv) {
 
         if (isFirstRun == 1) {
             
+            pthread_t thread_mov_inimigo;
+
+            if(pthread_create(&thread_mov_inimigo, NULL, move_inim, NULL) != 0){
+                fprintf(stderr ,"Erro ao criar thread de moimento do inimigo");
+                return 1;
+            }
+
             //Cria a thread de monitoracao do estado do jogo
             pthread_t thread_monitorar;
 
@@ -621,8 +679,15 @@ int main(int argc, char** argv) {
             btnValue = RDBT();
         }
 
-        //Volta o estado para "pausa"
-        appState = 1;
+        if (appState != 4) {
+            //Volta o estado para "pausa"
+            appState = 1;
+        }
+        else {
+            appState = 1;
+
+            appState = 4;
+        }
 
         //Atualiza variavel de primeira execucao
         isFirstRun = 0;
