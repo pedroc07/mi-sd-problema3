@@ -1,14 +1,22 @@
+//Bibliotecas padrao em C
 #include <stdio.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include "vlib.h"
-//Biblioteca de criacao e gerenciamento de threads para Linux
+# include <time.h>
+
+//Biblioteca sys-time, implementada por padrao em LINUX e Windows
+#include <sys/time.h>
+
+//Biblioteca de criacao e gerenciamento de threads e biblioteca de gerenciamento avancado de arquivos, ambas para Linux
 #include <pthread.h>
-#include <time.h>
+#include <fcntl.h>
 
 //Biblioteca original de mapeamento da memoria do dispositivo DE1-SoC com Linux embutido
 #include "map.c"
 
+//Biblioteca original de controle da GPU customizada
+#include "vlib.h"
+
+//Bibliotecas auxiliares das memorias da GPU
 #include "nave_bola.c"
 #include "nave_pinguim.c"
 
@@ -40,7 +48,8 @@ typedef struct {
 } Object;
 
 int appState = 1;                                           //Variavel de estado do jogo
-int btnValue = 0;
+int btnValue = 0;                                           //Variavel de bit dos botoes
+unsigned int enemyCount = 0;                                //Variavel de contagem dos inimigos atuais (binario de 4 bits, cada bit corresponde a um inimigo)
 int printList[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};   //Lista de objetos a serem exibidos
 Object player1;                                             //Objeto global do jogador 1
 Object player2;                                             //Objeto global do jogador 2
@@ -482,6 +491,147 @@ void* monitorar_jogo(void* arg) {
     }
 }
 
+// Função para controlar os inimigos
+void* controlar_inimigos(void* arg) {
+
+    int sessionTime = 0;                    //Tempo passado na sessao de jogo, em milissegundos
+    int gameSpeed = 8;                      //Fator velocidade do jogo
+    int sleepTime = 20000;                  //Tempo entre as acoes de controle dos inimigos (em microssegundos)
+    int separationFromLastSpawned = 0;      //Distancia, em pixels, do ultimo objeto "spawnado" a partir do canto superior
+
+    while(1) {
+        
+        //Espera o tempo estipulado
+        usleep(sleepTime);
+
+        //Caso existam menos que 4 inimigos e a separacao seja maior ou igual a 80 pixels, faz aparecer novo inimigo
+        if ((enemyCount < 15) && (separationFromLastSpawned >= 80)) {
+
+            //Indice do inimigo na lista, inicialmente 0
+            int enemyIndex = 3;
+
+            //Se o numero nao contem o bit de valor 1, o indice do inimigo e 0
+            if((enemyCount | 14) != 15) {
+                enemyIndex = 0;
+                enemyCount += 1;
+            }
+            //Se o numero nao contem o bit de valor 2, o indice do inimigo e 1
+            else if((enemyCount | 13) != 15) {
+                enemyIndex = 1;
+                enemyCount += 2;
+            }
+            //Se o numero nao contem o bit de valor 4, o indice do inimigo e 2
+            else if((enemyCount | 11) != 15) {
+                enemyIndex = 2;
+                enemyCount += 4;
+            }
+            //Caso contrario, ainda e preciso atualizar o contador para o indice 0
+            else {
+                enemyCount += 8;
+            }
+
+            //Status do inimigo e 0
+            enemyList[enemyIndex].status = 0;
+
+            //Obtem o tempo em microsegundos para uso na seed do RNG da posicao X do novo inimigo
+            struct timeval tempo;
+            gettimeofday(&tempo, NULL);
+            int tempo_preciso = tempo.tv_usec;
+    
+            //Gera uma posicao X aleatoria entre 5 e 275
+            srand (tempo_preciso);
+            int rPX = (5 + (rand() % 271));
+
+            //Posicao X do inimigo
+            enemyList[enemyIndex].xpos = rPX;
+
+            //Posicao Y do inimigo (0)
+            enemyList[enemyIndex].ypos = 0;
+
+            //Diz que o inimigo esta em estado 0
+            enemyList[enemyIndex].status = 0;
+
+            //Reseta a separacao
+            separationFromLastSpawned = 0;
+
+            //Sinaliza que o inimigo deve ser exibido
+            printList[(enemyIndex + 2)] = 1;
+        }
+
+        //Indice externo dos inimigos
+        int outerEnemyIndex;
+
+        //Loop para verificar se pode mover os inimigos
+        for(outerEnemyIndex = 0; outerEnemyIndex < 4; outerEnemyIndex++) {   
+
+            //Numero para a comparacao OR, inicialmente 14 pois permite comparar de forma a saber se o inimigo de bit de valor 1 esta em uso
+            int numberToCheck = 14;
+
+            //Se o indice do loop for 1, esse numero de comparacao muda para 13
+            if(outerEnemyIndex == 1) {
+                numberToCheck = 13;
+            }
+            //Se o indice do loop for 2, esse numero de comparacao muda para 11
+            else if(outerEnemyIndex == 2) {
+                numberToCheck = 11;
+            }
+            //Se o indice do loop for 3, esse numero de comparacao muda para 7
+            else if(outerEnemyIndex == 3) {
+                numberToCheck = 7;
+            }
+            
+            //Verifica se o inimigo esta no jogo
+            if((enemyCount | numberToCheck) == 15) {
+                
+                //Move o inimigo 1 posicao no eixo y
+                enemyList[outerEnemyIndex].ypos += 1;
+
+                //Verifica se houve colisao com o jogador 1
+                if (chk_collision((player1.xpos + player1.xStart), (player1.ypos + player1.yStart),
+                (player1.xpos + player1.xEnd), (player1.ypos + player1.yEnd),
+                (enemyList[outerEnemyIndex].xpos + enemyList[outerEnemyIndex].xStart), (enemyList[outerEnemyIndex].ypos + enemyList[outerEnemyIndex].yStart),
+                (enemyList[outerEnemyIndex].xpos + enemyList[outerEnemyIndex].xEnd), (enemyList[outerEnemyIndex].ypos + enemyList[outerEnemyIndex].yEnd)) == 0) {
+                    player1.status = 1;
+                }
+
+                //Verifica se houve colisao com o jogador 2
+                if (chk_collision((player2.xpos + player2.xStart), (player2.ypos + player2.yStart),
+                (player2.xpos + player2.xEnd), (player2.ypos + player2.yEnd),
+                (enemyList[outerEnemyIndex].xpos + enemyList[outerEnemyIndex].xStart), (enemyList[outerEnemyIndex].ypos + enemyList[outerEnemyIndex].yStart),
+                (enemyList[outerEnemyIndex].xpos + enemyList[outerEnemyIndex].xEnd), (enemyList[outerEnemyIndex].ypos + enemyList[outerEnemyIndex].yEnd)) == 0) {
+                    player2.status = 1;
+                }
+
+                //Verifica se chegou ao fim da tela (vertical)
+                if ((enemyList[outerEnemyIndex].ypos) >= 379) {
+                    
+                    //Estado 1 (destruido/out of bounds)
+                    enemyList[outerEnemyIndex].status = 1;
+
+                    //Atualiza o contador de inimigos
+                    enemyCount -= (15 - numberToCheck);
+                }
+            }
+        }
+
+        //Aumenta o contador de separacao
+        separationFromLastSpawned += 1;
+
+        //Caso o tempo registrado seja menor que 4 minutos (240 segundos ou 240,000 milisegundos)
+        if (sessionTime < 240000) {
+            
+            //Aumenta o tempo de sessao de acordo com o tempo que foi esperado (em milissegundos)
+            sessionTime += (sleepTime / 1000);
+
+            //Ajusta a velocidade de acordo com o tempo total de jogo
+            gameSpeed = (8 + (15000 / sessionTime));
+
+            //Ajusta o tempo de sleep de acordo com a velocidade de jogo
+            sleepTime = (160000 / gameSpeed);
+        }
+    }
+}
+
 void move_inim(){
 
     char dir = 'R';
@@ -679,15 +829,16 @@ int main(int argc, char** argv) {
             btnValue = RDBT();
         }
 
-        if (appState != 4) {
-            //Volta o estado para "pausa"
-            appState = 1;
-        }
-        else {
-            appState = 1;
+        //Volta o estado para "pausa"
+        appState = 1;
 
+        if (appState == 4) {
+            //Da 2 segundos para limpar a tela
+            usleep(2000000);
+
+            //Marca a finalizacao do programa com estado 4
             appState = 4;
-        }
+        }   
 
         //Atualiza variavel de primeira execucao
         isFirstRun = 0;
