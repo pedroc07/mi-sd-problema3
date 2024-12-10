@@ -54,6 +54,8 @@ Object player1;                                             //Objeto global do j
 Object player2;                                             //Objeto global do jogador 2
 Object enemyList[4];                                        //Lista global de ate 4 objetos referentes aos inimigos
 Object projetil;
+int pontuacao = 0;
+int gatilho = 0;
 
 /*Funcao para verificar colisao
 Argumentos:
@@ -313,11 +315,12 @@ void* ler_mouse(void* arg){
                 }
                 //printf("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, left, middle, right);
                 //Exibe o projetil caso o jogador 2 atire
-                if (left == 1 ){
+                if (left == 1 && gatilho == 0){
                     projetil.xpos = player2.xpos;
                     projetil.ypos = player2.ypos - 20;
                     projetil.status = 1;
                     printList[6] = 1;
+                    gatilho = 1;
                 }
                   
 
@@ -426,7 +429,7 @@ void* printar_objetos(void* arg) {
                           WBR_SPRITE(actualSprite.reg, actualSprite.spriteoffset, (xbase + actualSprite.xoffset), (ybase + actualSprite.yoffset), spriteSp);
                         }
                         else{
-                          printf("status: %d", projetil.status);
+                          //printf("status: %d", projetil.status);
                           WBR_SPRITE(actualSprite.reg, actualSprite.spriteoffset, (xbase + actualSprite.xoffset), (ybase + actualSprite.yoffset), projetil.status);    
                         }                    
                     }
@@ -500,6 +503,8 @@ void* monitorar_jogo(void* arg) {
 
             printList[0] = 1;
             printList[1] = 1;
+            printList[2] = 1;
+            printList[6] = 1;
 
             //Espera 400 milissegundos antes de continuar a thread (debouncing e "cooldown")
             usleep(400000);
@@ -603,9 +608,8 @@ void* controlar_inimigos(void* arg) {
             
             //Verifica se o inimigo esta no jogo
             if((enemyCount | numberToCheck) == 15) {
-                
                 //Move o inimigo 1 posicao no eixo y
-                enemyList[outerEnemyIndex].ypos += 1;
+                enemyList[outerEnemyIndex].ypos ++;
 
                 //Verifica se houve colisao com o jogador 1
                 if (chk_collision((player1.xpos + player1.xStart), (player1.ypos + player1.yStart),
@@ -653,35 +657,49 @@ void* controlar_inimigos(void* arg) {
     }
 }
 
-void movimento_autonomo(){
+//Substituir por controlar inimigos
+void* movimento_inimigo(void* arg){
 
     char dir = 'R';
 
     while(1){
-    usleep(10000);
-    //Movimento do inimigo 1
-    if (dir == 'R'){
-      enemyList[0].xpos ++;
-      printList[2] = 1;
-      if (enemyList[0].xpos == 450){
-        dir = 'L';
+        usleep(10000);
+        //Movimento do inimigo 1
+        if (dir == 'R'){
+        enemyList[0].xpos ++;
+        enemyList[0].ypos++;
+        printList[2] = 1;
+        if (enemyList[0].xpos == 450){
+            dir = 'L';
+        }
+        }
+        else {
+        enemyList[0].xpos --;
+        enemyList[0].ypos++;
+        printList[2] = 1;
+        if (enemyList[0].xpos == 170){
+            dir = 'R';
+        }  
+        }
     }
-    }
-    else {
-      enemyList[0].xpos --;
-      printList[2] = 1;
-      if (enemyList[0].xpos == 170){
-        dir = 'R';
-    }  
-    }
-    if(projetil.ypos > 0){
-      projetil.ypos --;
-      printList[6] = 1;
-    }
-    else{
-      projetil.status = 0;
-      printList[6] = 1;
-    }
+}
+
+void* movimento_projetil(void* arg){
+    while(1){
+        if(appState == 0){
+            usleep(10000);
+            if(projetil.ypos > 0){
+                projetil.ypos --;
+                printList[6] = 1;
+            }
+            else{
+                projetil.status = 0;
+                printList[6] = 1;
+                gatilho = 0;
+            }   
+        }else{
+            printList[6] = 0;
+        }
     }
 }
 
@@ -777,7 +795,7 @@ int main(int argc, char** argv) {
 
     //Valores do inimigo
     enemyList[0].xpos = 200;
-    enemyList[0].ypos = 200;
+    enemyList[0].ypos = 40;
     enemyList[0].xStart = 0;
     enemyList[0].yStart = 0;
     enemyList[0].xEnd = 19;
@@ -842,9 +860,16 @@ int main(int argc, char** argv) {
 
         if (isFirstRun == 1) {
             
-            pthread_t thread_mov;
+            pthread_t thread_mov_inimigo;
 
-            if(pthread_create(&thread_mov, NULL, movimento_autonomo, NULL) != 0){
+            if(pthread_create(&thread_mov_inimigo, NULL, controlar_inimigos, NULL) != 0){
+                fprintf(stderr ,"Erro ao criar thread de moimento de objetos autonomos");
+                return 1;
+            }
+
+            pthread_t thread_mov_projetil;
+
+            if(pthread_create(&thread_mov_projetil, NULL, movimento_projetil, NULL) != 0){
                 fprintf(stderr ,"Erro ao criar thread de moimento de objetos autonomos");
                 return 1;
             }
