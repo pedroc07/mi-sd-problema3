@@ -624,7 +624,7 @@ void* controlar_inimigos(void* arg) {
             sessionTime += (sleepTime / 1000);
 
             //Ajusta a velocidade de acordo com o tempo total de jogo
-            gameSpeed = (8 + (15000 / sessionTime));
+            gameSpeed = (8 + (sessionTime / 15000));
 
             //Ajusta o tempo de sleep de acordo com a velocidade de jogo
             sleepTime = (160000 / gameSpeed);
