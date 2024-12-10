@@ -46,17 +46,17 @@ typedef struct {
     Polygon polygonList[4]; //Lista de poligonos que compoem o objeto
 } Object;
 
-int appState = 1;                                           //Variavel de estado do jogo
 int btnValue = 0;                                           //Variavel de bit dos botoes
-unsigned int enemyCount = 0;                                //Variavel de contagem dos inimigos atuais (binario de 4 bits, cada bit corresponde a um inimigo)
-int sessionTime = 0;                                        //Tempo passado na sessao de jogo, em milissegundos
-int printList[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};   //Lista de objetos a serem exibidos
 Object player1;                                             //Objeto global do jogador 1
 Object player2;                                             //Objeto global do jogador 2
 Object enemyList[4];                                        //Lista global de ate 4 objetos referentes aos inimigos
-Object projetil;
-int pontuacao = 0;
-int gatilho = 0;
+Object projectileList[6];                                   //Lista global de ate 6 objetos referentes aos projeteis
+unsigned int enemyCount = 0;                                //Variavel de contagem dos inimigos atuais (binario de 4 bits, cada bit corresponde a um inimigo)
+unsigned int projectileCount = 0;                           //Variavel de contagem dos projeteis atuais (binario de 6 bits, cada bit corresponde a um projetil)
+int printList[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};   //Lista de objetos a serem exibidos
+int appState = 1;                                           //Variavel de estado do jogo
+int pontuacao = 0;                                          //Variavel da pontuacao
+int sessionTime = 0;                                        //Tempo passado na sessao de jogo, em milissegundos
 
 /*Funcao para verificar colisao
 Argumentos:
@@ -315,13 +315,39 @@ void* ler_mouse(void* arg){
                     yvector = (-255 + yvector);
                 }
                 //printf("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, left, middle, right);
-                //Exibe o projetil caso o jogador 2 atire
-                if (left == 1 && gatilho == 0){
+                //Dispara novo projetil caso exista "espaco"
+                if ((projectileCount < 63) && (left == 1)){
+
+                    int projectileIndex = 5;
+
+                    if((projectileCount | 62) != 63) {
+                        projectileIndex = 0;
+                        projectileCount += 1;
+                    }
+                    else if((projectileCount | 61) != 63) {
+                        projectileIndex = 1;
+                        projectileCount += 2;
+                    }
+                    else if((projectileCount | 59) != 63) {
+                        projectileIndex = 2;
+                        projectileCount += 4;
+                    }
+                    else if((projectileCount | 55) != 63) {
+                        projectileIndex = 3;
+                        projectileCount += 8;
+                    }
+                    else if((projectileCount | 47) != 63) {
+                        projectileIndex = 4;
+                        projectileCount += 16;
+                    }
+                    else {
+                        projectileCount += 32;
+                    }
+
                     projetil.xpos = player2.xpos;
                     projetil.ypos = player2.ypos - 20;
                     projetil.status = 1;
-                    printList[6] = 1;
-                    gatilho = 1;
+                    printList[(projectileIndex + 6)] = 1;
                 }
                   
 
