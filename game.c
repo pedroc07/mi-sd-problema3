@@ -17,8 +17,7 @@
 #include "vlib.h"
 
 //Bibliotecas auxiliares das memorias da GPU
-#include "nave_bola.c"
-#include "nave_pinguim.c"
+#include "sprite_data.c"
 
 typedef struct {
     int reg;                //Numero do registrador, valores abaixo de 1 resultam no nao-desenho do sprite
@@ -54,6 +53,7 @@ int printList[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};   //Lista de objetos a
 Object player1;                                             //Objeto global do jogador 1
 Object player2;                                             //Objeto global do jogador 2
 Object enemyList[4];                                        //Lista global de ate 4 objetos referentes aos inimigos
+Object projetil;
 
 /*Funcao para verificar colisao
 Argumentos:
@@ -311,6 +311,15 @@ void* ler_mouse(void* arg){
                 if(yvector >= 128) {
                     yvector = (-255 + yvector);
                 }
+                //printf("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, left, middle, right);
+                //Exibe o projetil caso o jogador 2 atire
+                if (left == 1 ){
+                    projetil.xpos = player2.xpos;
+                    projetil.ypos = player2.ypos - 20;
+                    projetil.status = 1;
+                    printList[6] = 1;
+                }
+                  
 
                 //Acha as novas posicoes apos o movimento
                 int newxpos = (player2.xpos + xvector);
@@ -397,6 +406,12 @@ void* printar_objetos(void* arg) {
                         xbase = (enemyList[(printCount - 2)]).xpos;
                         ybase = (enemyList[(printCount - 2)]).ypos;
                     }
+                    else if (printCount = 6){
+                        actualSprite = (projetil.spriteList)[elementCount];
+                        actualPolygon = (projetil.polygonList)[elementCount];
+                        xbase = projetil.xpos;
+                        ybase = projetil.ypos;   
+                    }
 
                     //Se o registro tem numero valido, sabe-se que tem sprite ali
                     if(actualSprite.reg >= 1) {
@@ -407,7 +422,13 @@ void* printar_objetos(void* arg) {
                             spriteSp = 1;
                         }
                         //Envia comando de "escrever" sprite
-                        WBR_SPRITE(actualSprite.reg, actualSprite.spriteoffset, (xbase + actualSprite.xoffset), (ybase + actualSprite.yoffset), spriteSp);
+                        if (printCount != 6){
+                          WBR_SPRITE(actualSprite.reg, actualSprite.spriteoffset, (xbase + actualSprite.xoffset), (ybase + actualSprite.yoffset), spriteSp);
+                        }
+                        else{
+                          printf("status: %d", projetil.status);
+                          WBR_SPRITE(actualSprite.reg, actualSprite.spriteoffset, (xbase + actualSprite.xoffset), (ybase + actualSprite.yoffset), projetil.status);    
+                        }                    
                     }
 
                     if(actualPolygon.size >= 1) {
@@ -632,12 +653,13 @@ void* controlar_inimigos(void* arg) {
     }
 }
 
-void move_inim(){
+void movimento_autonomo(){
 
     char dir = 'R';
-    
+
     while(1){
     usleep(10000);
+    //Movimento do inimigo 1
     if (dir == 'R'){
       enemyList[0].xpos ++;
       printList[2] = 1;
@@ -651,6 +673,14 @@ void move_inim(){
       if (enemyList[0].xpos == 170){
         dir = 'R';
     }  
+    }
+    if(projetil.ypos > 0){
+      projetil.ypos --;
+      printList[6] = 1;
+    }
+    else{
+      projetil.status = 0;
+      printList[6] = 1;
     }
     }
 }
@@ -685,7 +715,6 @@ int main(int argc, char** argv) {
 
     //Carrega os sprites para a memoria
     desenha_sprite();
-    desenha_sprite_ps2();
 
     //Inicializa o controlador I2C e configura a conexao entre o controlador I2C e o acelerometro ADXL345
     I2C0_init();
@@ -756,7 +785,7 @@ int main(int argc, char** argv) {
     enemyList[0].status = 0;
 
     enemyList[0].spriteList[0].reg = 5;
-    enemyList[0].spriteList[0].spriteoffset = 2;
+    enemyList[0].spriteList[0].spriteoffset = 3;
     enemyList[0].spriteList[0].xoffset = 0;
     enemyList[0].spriteList[0].yoffset = 0;
 
@@ -770,6 +799,30 @@ int main(int argc, char** argv) {
     enemyList[0].polygonList[3].size = -1;
 
     printList[2] = 1;
+
+    projetil.xpos = 200;
+    projetil.ypos = 200;
+    projetil.xStart = 0;
+    projetil.yStart = 0;
+    projetil.xEnd = 19;
+    projetil.yEnd = 19;
+    projetil.status = 0;
+
+    projetil.spriteList[0].reg = 6;
+    projetil.spriteList[0].spriteoffset = 2;
+    projetil.spriteList[0].xoffset = 0;
+    projetil.spriteList[0].yoffset = 0;
+
+    projetil.spriteList[1].reg = -1;
+    projetil.spriteList[2].reg = -1;
+    projetil.spriteList[3].reg = -1;
+
+    projetil.polygonList[0].size = -1;
+    projetil.polygonList[1].size = -1;
+    projetil.polygonList[2].size = -1;
+    projetil.polygonList[3].size = -1;
+
+    printList[6] = 1;
     
     while(appState != 4) {
         
@@ -789,10 +842,10 @@ int main(int argc, char** argv) {
 
         if (isFirstRun == 1) {
             
-            pthread_t thread_mov_inimigo;
+            pthread_t thread_mov;
 
-            if(pthread_create(&thread_mov_inimigo, NULL, move_inim, NULL) != 0){
-                fprintf(stderr ,"Erro ao criar thread de moimento do inimigo");
+            if(pthread_create(&thread_mov, NULL, movimento_autonomo, NULL) != 0){
+                fprintf(stderr ,"Erro ao criar thread de moimento de objetos autonomos");
                 return 1;
             }
 

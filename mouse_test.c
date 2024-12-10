@@ -116,7 +116,7 @@ void move_mouse(){
     y -= (int) data[2];
     JogadorMouse.x = ((x*3)+300);
     JogadorMouse.y = ((y*3)+200);
-    //printf("x=%d, y=%d, left=%d, middle=%d, right=%d\n", JogadorMouse.x, JogadorMouse.y, left, middle, right);
+    printf("x=%d, y=%d, left=%d, middle=%d, right=%d\n", JogadorMouse.x, JogadorMouse.y, left, middle, right);
     WBR_SPRITE(JogadorMouse.reg, JogadorMouse.offset, JogadorMouse.x, JogadorMouse.y, JogadorMouse.ativo);
     }
   }
