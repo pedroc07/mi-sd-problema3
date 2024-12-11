@@ -301,6 +301,8 @@ void* ler_acelerometro(void* arg) {
                 projectileList[projectileIndex].ypos = (player1.ypos - 20);
                 projectileList[projectileIndex].status = 1;
                 printList[(projectileIndex + 6)] = 1;
+
+                projectileCooldown0 = 0;
             }
 
             //Tempo para o proximo ciclo de leitura (1.5 milissegundos)
@@ -427,6 +429,8 @@ void* ler_mouse(void* arg){
                     projectileList[projectileIndex].ypos = (player2.ypos - 20);
                     projectileList[projectileIndex].status = 1;
                     printList[(projectileIndex + 6)] = 1;
+
+                    projectileCooldown1 = 0;
                 }
             }
         }
@@ -803,6 +807,7 @@ void* movimento_projetil(void* arg){
                         
                         //Verifica se o inimigo esta no jogo
                         if((enemyCount | numberToCheck1) == 15) {
+                            
                             //Verifica se houve colisao do projetil com o inimigo
                             if (chk_collision(
                             (projectileList[projectileIndex].xpos + projectileList[projectileIndex].xStart), (projectileList[projectileIndex].ypos + projectileList[projectileIndex].yStart),
@@ -830,6 +835,14 @@ void* movimento_projetil(void* arg){
                     //Marca para exibicao
                     printList[(projectileIndex + 6)] = 1;
                 }
+            }
+
+            //Aumenta o contador de tempo esperado entre os disparos
+            if(projectileCooldown0 < 64) {
+                projectileCooldown0 += 1;
+            }
+            if(projectileCooldown1 < 64) {
+                projectileCooldown1 += 1;
             }
         }
     }
