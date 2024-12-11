@@ -1,7 +1,7 @@
 //Bibliotecas padrao em C
 #include <stdio.h>
 #include <unistd.h>
-#include <time.h>
+# include <time.h>
 
 //Biblioteca sys-time, implementada por padrao em LINUX e Windows
 #include <sys/time.h>
@@ -18,6 +18,8 @@
 
 //Bibliotecas auxiliares das memorias da GPU (tabelas de sprites e poligonos)
 #include "sprite_data.c"
+
+#include "telas.c"
 
 typedef struct {
     int reg;                //Numero do registrador, valores abaixo de 1 resultam no nao-desenho do sprite
@@ -628,9 +630,10 @@ void* monitorar_jogo(void* arg) {
             //Espera 100 milissegundos antes de continuar a thread (debouncing)
             usleep(100000);
         }
-        //Se o valor do botao e 4 e o estado e 0, pausamos o jogo
+        //Se o valor do botao e 4 e o estado e 1, continuamos o jogo
         else if ((btnValue == 4) && (appState == 1)) {
             appState = 0;
+            imprime_tela_jogo();
 
             for(cont =0; cont < 12; cont++){
                 printList[cont] = 1;
@@ -974,15 +977,16 @@ int main(int argc, char** argv) {
     player1.xEnd = 19;
     player1.yEnd = 19;
     
-    player1.spriteList[0].reg = 1;
-    player1.spriteList[0].spriteoffset = 0;
-    player1.spriteList[0].xoffset = 0;
-    player1.spriteList[0].yoffset = 0;
+    player1.spriteList[0].reg = -1;
     player1.spriteList[1].reg = -1;
     player1.spriteList[2].reg = -1;
     player1.spriteList[3].reg = -1;
 
-    player1.polygonList[0].size = -1;
+    player1.polygonList[0].size = 1;
+    player1.polygonList[0].color = 455;
+    player1.polygonList[0].shape = 1;
+    player1.polygonList[0].xoffset = 10;
+    player1.polygonList[0].yoffset = 5;
     player1.polygonList[1].size = -1;
     player1.polygonList[2].size = -1;
     player1.polygonList[3].size = -1;
@@ -994,7 +998,7 @@ int main(int argc, char** argv) {
     player2.yEnd = 19;
 
     player2.spriteList[0].reg = 3;
-    player2.spriteList[0].spriteoffset = 1;
+    player2.spriteList[0].spriteoffset = 0;
     player2.spriteList[0].xoffset = 0;
     player2.spriteList[0].yoffset = 0;
     player2.spriteList[1].reg = -1;
@@ -1006,8 +1010,13 @@ int main(int argc, char** argv) {
     player2.polygonList[2].size = -1;
     player2.polygonList[3].size = -1;
 
-    int enemyIndex0;
+    
+    struct timeval tempo;
+    int tempo_preciso;
+
     //Valores fixos de objeto dos inimigos
+    int spr_offset;
+    int enemyIndex0;
     for(enemyIndex0 = 0; enemyIndex0 < 4; enemyIndex0++) {
         
         enemyList[enemyIndex0].xStart = 0;
@@ -1016,9 +1025,14 @@ int main(int argc, char** argv) {
         enemyList[enemyIndex0].yEnd = 19;
 
         enemyList[enemyIndex0].spriteList[0].reg = (5 + enemyIndex0);
-        enemyList[enemyIndex0].spriteList[0].spriteoffset = 3;
         enemyList[enemyIndex0].spriteList[0].xoffset = 0;
         enemyList[enemyIndex0].spriteList[0].yoffset = 0;
+
+        gettimeofday(&tempo, NULL);
+        tempo_preciso = tempo.tv_usec;
+        srand (tempo_preciso);
+        spr_offset = (2 + (rand() % 6));
+        enemyList[enemyIndex0].spriteList[0].spriteoffset = 0;
 
         enemyList[enemyIndex0].spriteList[1].reg = -1;
         enemyList[enemyIndex0].spriteList[2].reg = -1;
@@ -1030,6 +1044,8 @@ int main(int argc, char** argv) {
         enemyList[enemyIndex0].polygonList[3].size = -1;
     }
 
+    //enemyList[0].spriteList[0].spriteoffset = 0;
+
     int projectileIndex0;
     //Valores fixos de objeto dos projeteis
     for(projectileIndex0 = 0; projectileIndex0 < 6; projectileIndex0++) {
@@ -1040,7 +1056,7 @@ int main(int argc, char** argv) {
         projectileList[projectileIndex0].yEnd = 14;
 
         projectileList[projectileIndex0].spriteList[0].reg = (9 + projectileIndex0);
-        projectileList[projectileIndex0].spriteList[0].spriteoffset = 2;
+        projectileList[projectileIndex0].spriteList[0].spriteoffset = 1;
         projectileList[projectileIndex0].spriteList[0].xoffset = 0;
         projectileList[projectileIndex0].spriteList[0].yoffset = 0;
 
