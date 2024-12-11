@@ -1,7 +1,7 @@
 //Bibliotecas padrao em C
 #include <stdio.h>
 #include <unistd.h>
-# include <time.h>
+#include <time.h>
 
 //Biblioteca sys-time, implementada por padrao em LINUX e Windows
 #include <sys/time.h>
@@ -13,10 +13,10 @@
 //Biblioteca original de mapeamento da memoria do dispositivo DE1-SoC com Linux embutido
 #include "map.c"
 
-//Biblioteca original de controle da GPU customizada
+//Biblioteca original de controle da GPU customizada (ARM v7)
 #include "vlib.h"
 
-//Bibliotecas auxiliares das memorias da GPU
+//Bibliotecas auxiliares das memorias da GPU (tabelas de sprites e poligonos)
 #include "sprite_data.c"
 
 typedef struct {
@@ -46,17 +46,19 @@ typedef struct {
     Polygon polygonList[4]; //Lista de poligonos que compoem o objeto
 } Object;
 
-int appState = 1;                                           //Variavel de estado do jogo
 int btnValue = 0;                                           //Variavel de bit dos botoes
-unsigned int enemyCount = 0;                                //Variavel de contagem dos inimigos atuais (binario de 4 bits, cada bit corresponde a um inimigo)
-int sessionTime = 0;                                        //Tempo passado na sessao de jogo, em milissegundos
-int printList[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};   //Lista de objetos a serem exibidos
 Object player1;                                             //Objeto global do jogador 1
 Object player2;                                             //Objeto global do jogador 2
 Object enemyList[4];                                        //Lista global de ate 4 objetos referentes aos inimigos
-Object projetil;
-int pontuacao = 0;
-int gatilho = 0;
+Object projectileList[6];                                   //Lista global de ate 6 objetos referentes aos projeteis
+unsigned int enemyCount = 0;                                //Variavel de contagem dos inimigos atuais (binario de 4 bits, cada bit corresponde a um inimigo)
+unsigned int projectileCount = 0;                           //Variavel de contagem dos projeteis atuais (binario de 6 bits, cada bit corresponde a um projetil)
+int printList[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};   //Lista de objetos a serem exibidos
+int appState = 1;                                           //Variavel de estado do jogo
+int pontuacao = 0;                                          //Variavel da pontuacao
+int sessionTime = 0;                                        //Tempo passado na sessao de jogo, em milissegundos
+int projectileCooldown0 = 64;                               //Contador de espera entre o disparo de projeteis para o jogador 1
+int projectileCooldown1 = 64;                               //Contador de espera entre o disparo de projeteis para o jogador 2
 
 /*Funcao para verificar colisao
 Argumentos:
@@ -167,6 +169,48 @@ int intervalsOfTen(int value) {
     }
 }
 
+//Funcao para exibir o numero referente a pontuacao no display de 7 segmentos
+void mostrar_numero(char* numero) {
+  int str_size = strlen(numero);
+  int cont0;
+  
+  //Repete para cada digito do display de 7 segmentos (indice 0 ao indice 5)
+  for(cont0 = 0; cont0 < 6; cont0++) {
+    //Inicialmente 127, ou seja 0b111111, o que faz com que todos os segmentos estejam desligados
+    int indicador_binario = 127;
+
+    //Se estiver em um indice correspondente a um digito valido
+    if((cont0 + str_size) >= 6) {
+      int digito = numero[(5 - cont0)];
+      
+      //De acordo com o digito na casa decimal atual, zera o bit referente ao segmento, o que faz com que este segmento fique ligado
+      if(digito == '0' || digito == '2' || digito == '3' || digito == '5' || digito == '6' || digito == '7' || digito == '8' || digito == '9') {
+        indicador_binario -= 1;
+      }
+      if(digito == '0' || digito == '1' || digito =='2' || digito == '3' || digito == '4' || digito == '7' || digito == '8' || digito == '9') {
+        indicador_binario -= 2;
+      }
+      if(digito == '0' || digito == '1' || digito == '3' || digito == '4' || digito == '5' || digito == '6' || digito == '7' || digito == '8' || digito == '9') {
+        indicador_binario -= 4;
+      }
+      if(digito == '0' || digito == '2' || digito == '3' || digito == '5' || digito == '6' || digito == '8' || digito == '9') {
+        indicador_binario -= 8;
+      }
+      if(digito == '0' || digito == '2' || digito == '6' || digito == '8') {
+        indicador_binario -= 16;
+      }
+      if(digito == '0' || digito == '4' || digito == '5' || digito == '6' || digito == '8' || digito == '9') {
+        indicador_binario -= 32;
+      }
+      if(digito == '2' || digito == '3' || digito == '4' || digito == '5' || digito == '6' || digito == '8' || digito == '9') {
+        indicador_binario -= 64;
+      }
+    }
+
+    //Manda a informacao para a funcao assembly que controla os displays de 7 segmentos
+    TNLD(cont0, indicador_binario);
+  }
+}
 
 // Função para ler o acelerômetro em uma thread e atualizar a posicao do jogador 1
 void* ler_acelerometro(void* arg) {
@@ -256,13 +300,56 @@ void* ler_acelerometro(void* arg) {
                 for (objCount = 0; objCount < 4; objCount++) {
                     Object actualEnemy = enemyList[objCount];
 
-                    if (chk_collision((player1.xpos + player1.xStart), (player1.ypos + player1.yStart),
+                    if ((chk_collision((player1.xpos + player1.xStart), (player1.ypos + player1.yStart),
                     (player1.xpos + player1.xEnd), (player1.ypos + player1.yEnd),
                     (actualEnemy.xpos + actualEnemy.xStart), (actualEnemy.ypos + actualEnemy.yStart),
-                    (actualEnemy.xpos + actualEnemy.xEnd), (actualEnemy.ypos + actualEnemy.yEnd)) == 0) {
+                    (actualEnemy.xpos + actualEnemy.xEnd), (actualEnemy.ypos + actualEnemy.yEnd)) == 0) && (actualEnemy.status == 0)) {
                         player1.status = 1;
+                        printList[0] = 1;
+
+                        if (player2.status == 1) {
+                            appState = 2;
+                        }
                     }
                 }
+            }
+
+            //Dispara novo projetil caso exista "espaco" e o tempo de espera 1 esteja pronto
+            if ((projectileCount < 63) && (btnValue == 8) && (projectileCooldown0 >= 64) && (player1.status == 0)) {
+
+                int projectileIndex = 5;
+
+                if((projectileCount | 62) != 63) {
+                    projectileIndex = 0;
+                    projectileCount += 1;
+                }
+                else if((projectileCount | 61) != 63) {
+                    projectileIndex = 1;
+                    projectileCount += 2;
+                }
+                else if((projectileCount | 59) != 63) {
+                    projectileIndex = 2;
+                    projectileCount += 4;
+                }
+                else if((projectileCount | 55) != 63) {
+                    projectileIndex = 3;
+                    projectileCount += 8;
+                }
+                else if((projectileCount | 47) != 63) {
+                    projectileIndex = 4;
+                    projectileCount += 16;
+                }
+                else {
+                    projectileCount += 32;
+                }
+
+                //Edita o projetil novo com os parametros desejados
+                projectileList[projectileIndex].xpos = player1.xpos;
+                projectileList[projectileIndex].ypos = (player1.ypos - 20);
+                projectileList[projectileIndex].status = 0;
+                printList[(projectileIndex + 6)] = 1;
+
+                projectileCooldown0 = 0;
             }
 
             //Tempo para o proximo ciclo de leitura (1.5 milissegundos)
@@ -313,17 +400,7 @@ void* ler_mouse(void* arg){
                 //Valores unsigned acima de 127 sao negativos (ate 255)
                 if(yvector >= 128) {
                     yvector = (-255 + yvector);
-                }
-                //printf("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, left, middle, right);
-                //Exibe o projetil caso o jogador 2 atire
-                if (left == 1 && gatilho == 0){
-                    projetil.xpos = player2.xpos;
-                    projetil.ypos = player2.ypos - 20;
-                    projetil.status = 1;
-                    printList[6] = 1;
-                    gatilho = 1;
-                }
-                  
+                } 
 
                 //Acha as novas posicoes apos o movimento
                 int newxpos = (player2.xpos + xvector);
@@ -356,13 +433,56 @@ void* ler_mouse(void* arg){
                     //Verifica se houve colisao com objeto "inimigo"
                     for (objCount = 0; objCount < 4; objCount++) {
                         Object actualEnemy = enemyList[objCount];
-                        if (chk_collision((player2.xpos + player2.xStart), (player2.ypos + player2.yStart),
+                        if ((chk_collision((player2.xpos + player2.xStart), (player2.ypos + player2.yStart),
                         (player2.xpos + player2.xEnd), (player2.ypos + player2.yEnd),
                         (actualEnemy.xpos + actualEnemy.xStart), (actualEnemy.ypos + actualEnemy.yStart),
-                        (actualEnemy.xpos + actualEnemy.xEnd), (actualEnemy.ypos + actualEnemy.yEnd)) == 0) {
+                        (actualEnemy.xpos + actualEnemy.xEnd), (actualEnemy.ypos + actualEnemy.yEnd)) == 0) && (actualEnemy.status == 0)) {
                             player2.status = 1;
+                            printList[1] = 1;
+
+                            if (player1.status == 1) {
+                                appState = 2;
+                            }
                         }
                     }
+                }
+
+                //Dispara novo projetil caso exista "espaco" e o tempo de espera 1 esteja pronto
+                if ((projectileCount < 63) && (left == 1) && (projectileCooldown1 >= 64) && (player2.status == 0)){
+
+                    int projectileIndex = 5;
+
+                    if((projectileCount | 62) != 63) {
+                        projectileIndex = 0;
+                        projectileCount += 1;
+                    }
+                    else if((projectileCount | 61) != 63) {
+                        projectileIndex = 1;
+                        projectileCount += 2;
+                    }
+                    else if((projectileCount | 59) != 63) {
+                        projectileIndex = 2;
+                        projectileCount += 4;
+                    }
+                    else if((projectileCount | 55) != 63) {
+                        projectileIndex = 3;
+                        projectileCount += 8;
+                    }
+                    else if((projectileCount | 47) != 63) {
+                        projectileIndex = 4;
+                        projectileCount += 16;
+                    }
+                    else {
+                        projectileCount += 32;
+                    }
+
+                    //Edita o projetil novo com os parametros desejados
+                    projectileList[projectileIndex].xpos = player2.xpos;
+                    projectileList[projectileIndex].ypos = (player2.ypos - 20);
+                    projectileList[projectileIndex].status = 0;
+                    printList[(projectileIndex + 6)] = 1;
+
+                    projectileCooldown1 = 0;
                 }
             }
         }
@@ -380,6 +500,7 @@ void* printar_objetos(void* arg) {
 
             //Se o objeto esta marcado na lista para "imprimir"
             if (printList[printCount] == 1) {
+                
                 int elementCount;
 
                 //Varre a lista de 4 sprites e 4 poligonos que PODEM fazer parte de cada objeto
@@ -388,6 +509,7 @@ void* printar_objetos(void* arg) {
                     Polygon actualPolygon;
                     int xbase;
                     int ybase;
+                    int actualState;
 
                     //Indice 0 pertence ao jogador 1
                     if(printCount == 0) {
@@ -395,6 +517,7 @@ void* printar_objetos(void* arg) {
                         actualPolygon = (player1.polygonList)[elementCount];
                         xbase = player1.xpos;
                         ybase = player1.ypos;
+                        actualState = player1.status;
                     }
                     //Indice 1 pertence ao jogador 2
                     else if(printCount == 1) {
@@ -402,6 +525,7 @@ void* printar_objetos(void* arg) {
                         actualPolygon = (player2.polygonList)[elementCount];
                         xbase = player2.xpos;
                         ybase = player2.ypos;
+                        actualState = player2.status;
                     }
                     //Indices de 2 a 5 pertencem aos "inimigos"
                     else if((printCount >= 2) && (printCount < 6)) {
@@ -409,38 +533,40 @@ void* printar_objetos(void* arg) {
                         actualPolygon = ((enemyList[(printCount - 2)]).polygonList)[elementCount];
                         xbase = (enemyList[(printCount - 2)]).xpos;
                         ybase = (enemyList[(printCount - 2)]).ypos;
+                        actualState = (enemyList[(printCount - 2)]).status;
                     }
-                    else if (printCount = 6){
-                        actualSprite = (projetil.spriteList)[elementCount];
-                        actualPolygon = (projetil.polygonList)[elementCount];
-                        xbase = projetil.xpos;
-                        ybase = projetil.ypos;   
+                    else {
+                        actualSprite = (projectileList[(printCount - 6)].spriteList)[elementCount];
+                        actualPolygon = (projectileList[(printCount - 6)].polygonList)[elementCount];
+                        xbase = projectileList[(printCount - 6)].xpos;
+                        ybase = projectileList[(printCount - 6)].ypos;
+                        actualState = (projectileList[(printCount - 6)]).status;
                     }
 
                     //Se o registro tem numero valido, sabe-se que tem sprite ali
                     if(actualSprite.reg >= 1) {
                         //Numero sp do sprite inicialmente 0, que desativa
                         int spriteSp = 0;
-                        //Porem, caso o jogo esteja em execucao, muda para 1, ativando
-                        if(appState == 0) {
+                        //Porem, caso o jogo esteja em execucao e o estado seja 0, muda para 1, ativando
+                        if((appState == 0) && (actualState == 0)) {
                             spriteSp = 1;
                         }
                         //Envia comando de "escrever" sprite
-                        if (printCount != 6){
-                          WBR_SPRITE(actualSprite.reg, actualSprite.spriteoffset, (xbase + actualSprite.xoffset), (ybase + actualSprite.yoffset), spriteSp);
-                        }
-                        else{
+                        //if (printCount < 6){
+                        WBR_SPRITE(actualSprite.reg, actualSprite.spriteoffset, (xbase + actualSprite.xoffset), (ybase + actualSprite.yoffset), spriteSp);
+                        //}
+                        /*else{
                           //printf("status: %d", projetil.status);
-                          WBR_SPRITE(actualSprite.reg, actualSprite.spriteoffset, (xbase + actualSprite.xoffset), (ybase + actualSprite.yoffset), projetil.status);    
-                        }                    
+                          WBR_SPRITE(actualSprite.reg, actualSprite.spriteoffset, (xbase + actualSprite.xoffset), (ybase + actualSprite.yoffset), projectileList[(printCount - 6)].status);    
+                        }*/                    
                     }
 
                     if(actualPolygon.size >= 1) {
                         //Tamanho do poligono inicalmente 0, que desativa
                         int polSize = 0;
                         
-                        //Porem, caso o jogo esteja em execucao, muda para 1, ativando
-                        if(appState == 0) {
+                        //Porem, caso o jogo esteja em execucao e o estado seja 0, muda para 1, ativando
+                        if((appState == 0) && (actualState == 0)) {
                             polSize = actualPolygon.size;
                         }
                         
@@ -458,6 +584,8 @@ void* printar_objetos(void* arg) {
 // Função para monitorar o fluxo do jogo
 void* monitorar_jogo(void* arg) {
     
+    int cont;
+
     while(1) {
         //printf("AS: %d\n", appState);
 
@@ -465,16 +593,17 @@ void* monitorar_jogo(void* arg) {
         if (btnValue == 1) {
             appState = 4;
 
-            printList[0] = 1;
-            printList[1] = 1;
+            for(cont =0; cont < 12; cont++){
+                printList[cont] = 1;
+            }
         }
         //Se o valor do botao e 2, reiniciamos o jogo
         else if (btnValue == 2) {
             appState = 3;
-
-            printList[0] = 1;
-            printList[1] = 1;
-
+            
+            for(cont =0; cont < 12; cont++){
+                printList[cont] = 1;
+            }
             //Espera 400 milissegundos antes de continuar a thread (debouncing e "cooldown")
             usleep(400000);
             
@@ -487,8 +616,9 @@ void* monitorar_jogo(void* arg) {
         else if ((btnValue == 4) && (appState == 0)) {
             appState = 1;
 
-            printList[0] = 1;
-            printList[1] = 1;
+            for(cont =0; cont < 12; cont++){
+                printList[cont] = 1;
+            }
 
             //Espera 400 milissegundos antes de continuar a thread (debouncing e "cooldown")
             usleep(400000);
@@ -502,10 +632,9 @@ void* monitorar_jogo(void* arg) {
         else if ((btnValue == 4) && (appState == 1)) {
             appState = 0;
 
-            printList[0] = 1;
-            printList[1] = 1;
-            printList[2] = 1;
-            printList[6] = 1;
+            for(cont =0; cont < 12; cont++){
+                printList[cont] = 1;
+            }
 
             //Espera 400 milissegundos antes de continuar a thread (debouncing e "cooldown")
             usleep(400000);
@@ -617,15 +746,17 @@ void* controlar_inimigos(void* arg) {
                     //Move o inimigo 1 posicao no eixo y
                     enemyList[outerEnemyIndex].ypos += 1;
 
-                    //Marca para exibicao
-                    printList[(outerEnemyIndex + 2)] = 1;
-
                     //Verifica se houve colisao com o jogador 1
                     if (chk_collision((player1.xpos + player1.xStart), (player1.ypos + player1.yStart),
                     (player1.xpos + player1.xEnd), (player1.ypos + player1.yEnd),
                     (enemyList[outerEnemyIndex].xpos + enemyList[outerEnemyIndex].xStart), (enemyList[outerEnemyIndex].ypos + enemyList[outerEnemyIndex].yStart),
                     (enemyList[outerEnemyIndex].xpos + enemyList[outerEnemyIndex].xEnd), (enemyList[outerEnemyIndex].ypos + enemyList[outerEnemyIndex].yEnd)) == 0) {
                         player1.status = 1;
+                        printList[0] = 1;
+
+                        if (player2.status == 1) {
+                            appState = 2;
+                        }
                     }
 
                     //Verifica se houve colisao com o jogador 2
@@ -634,6 +765,11 @@ void* controlar_inimigos(void* arg) {
                     (enemyList[outerEnemyIndex].xpos + enemyList[outerEnemyIndex].xStart), (enemyList[outerEnemyIndex].ypos + enemyList[outerEnemyIndex].yStart),
                     (enemyList[outerEnemyIndex].xpos + enemyList[outerEnemyIndex].xEnd), (enemyList[outerEnemyIndex].ypos + enemyList[outerEnemyIndex].yEnd)) == 0) {
                         player2.status = 1;
+                        printList[1] = 1;
+
+                        if (player1.status == 1) {
+                            appState = 2;
+                        }
                     }
 
                     //Verifica se chegou ao fim da tela (vertical)
@@ -644,10 +780,10 @@ void* controlar_inimigos(void* arg) {
 
                         //Atualiza o contador de inimigos
                         enemyCount -= (15 - numberToCheck);
-
-                        //Marca para exibicao
-                        printList[(outerEnemyIndex + 2)] = 1;
                     }
+
+                    //Marca para exibicao
+                    printList[(outerEnemyIndex + 2)] = 1;
                 }
             }
 
@@ -670,19 +806,124 @@ void* controlar_inimigos(void* arg) {
     }
 }
 
+//Funcao para controlar o movimento autonomo dos projeteis
 void* movimento_projetil(void* arg){
+    
     while(1){
-        if(appState == 0){
-            usleep(10000);
-            if(projetil.ypos > 40){
-                projetil.ypos --;
-                printList[6] = 1;
+        
+        if(appState == 0) {
+
+            usleep(8000);
+
+            int projectileIndex;
+            for (projectileIndex = 0; projectileIndex < 6; projectileIndex++) {
+
+                //Numero para a comparacao OR, inicialmente 62 pois permite comparar de forma a saber se o projetil de bit de valor 1 esta em uso
+                int numberToCheck0 = 62;
+
+                //Se o indice do loop for 1, esse numero de comparacao muda para 61
+                if(projectileIndex == 1) {
+                    numberToCheck0 = 61;
+                }
+                //Se o indice do loop for 2, esse numero de comparacao muda para 59
+                else if(projectileIndex == 2) {
+                    numberToCheck0 = 59;
+                }
+                //Se o indice do loop for 3, esse numero de comparacao muda para 55
+                else if(projectileIndex == 3) {
+                    numberToCheck0 = 55;
+                }
+                //Se o indice do loop for 3, esse numero de comparacao muda para 47
+                else if(projectileIndex == 4) {
+                    numberToCheck0 = 47;
+                }
+                //Se o indice do loop for 3, esse numero de comparacao muda para 47
+                else if(projectileIndex == 5) {
+                    numberToCheck0 = 31;
+                }
+
+                //Verifica se o projetil esta no jogo
+                if((projectileCount | numberToCheck0) == 63) {
+                    
+                    //Move o projetil 1 posicao no eixo y
+                    projectileList[projectileIndex].ypos -= 1;
+
+                    //Indice externo dos inimigos
+                    int enemyIndex;
+
+                    //Loop para verificar se existem inimigos
+                    for(enemyIndex = 0; enemyIndex < 4; enemyIndex++) {
+
+                        //Numero para a comparacao OR, inicialmente 14 pois permite comparar de forma a saber se o inimigo de bit de valor 1 esta em uso
+                        int numberToCheck1 = 14;
+
+                        //Se o indice do loop for 1, esse numero de comparacao muda para 13
+                        if(enemyIndex == 1) {
+                            numberToCheck1 = 13;
+                        }
+                        //Se o indice do loop for 2, esse numero de comparacao muda para 11
+                        else if(enemyIndex == 2) {
+                            numberToCheck1 = 11;
+                        }
+                        //Se o indice do loop for 3, esse numero de comparacao muda para 7
+                        else if(enemyIndex == 3) {
+                            numberToCheck1 = 7;
+                        }
+                        
+                        //Verifica se o inimigo esta no jogo
+                        if((enemyCount | numberToCheck1) == 15) {
+                            
+                            //Verifica se houve colisao do projetil com o inimigo
+                            if (chk_collision(
+                            (projectileList[projectileIndex].xpos + projectileList[projectileIndex].xStart), (projectileList[projectileIndex].ypos + projectileList[projectileIndex].yStart),
+                            (projectileList[projectileIndex].xpos + projectileList[projectileIndex].xEnd), (projectileList[projectileIndex].ypos + projectileList[projectileIndex].yEnd),
+                            (enemyList[enemyIndex].xpos + enemyList[enemyIndex].xStart), (enemyList[enemyIndex].ypos + enemyList[enemyIndex].xStart),
+                            (enemyList[enemyIndex].xpos + enemyList[enemyIndex].xEnd), (enemyList[enemyIndex].ypos + enemyList[enemyIndex].yEnd))== 0) {
+                                projectileList[projectileIndex].status = 1;
+                                enemyList[enemyIndex].status = 1;
+
+                                projectileCount -= (63 - numberToCheck0);
+                                enemyCount -= (15- numberToCheck1);
+                                
+                                printList[(projectileIndex + 6)] = 1;
+                                printList[(enemyIndex + 2)] = 1;
+
+                                pontuacao += 1;
+
+                                //Converte int em array de caracteres de ate 32 caracteres (o que cabe na tela apartir da posicao inicial)
+                                char int_array[32];
+                                sprintf(int_array, "%d", pontuacao*100);
+
+                                mostrar_numero(int_array);
+                            }
+                        }
+                    }
+
+                    //Verifica se chegou ao fim da tela (vertical)
+                    if ((projectileList[projectileIndex].ypos) < 35) {
+                        
+                        //Estado 1 (destruido/out of bounds)
+                        projectileList[projectileIndex].status = 1;
+
+                        //Atualiza o contador de inimigos
+                        projectileCount -= (63 - numberToCheck0);
+                    }
+
+                    //Marca para exibicao
+                    printList[(projectileIndex + 6)] = 1;
+                }
             }
-            else{
-                projetil.status = 0;
-                printList[6] = 1;
-                gatilho = 0;
-            }   
+
+            //Aumenta o contador de tempo esperado entre os disparos
+            if(projectileCooldown0 < 64) {
+                projectileCooldown0 += 1;
+            }
+            if(projectileCooldown1 < 64) {
+                projectileCooldown1 += 1;
+            }
+
+            //printf("PCD0: %d, PCD1: %d, EC: %d, PC: %d\n", projectileCooldown0, projectileCooldown1, enemyCount, projectileCount);
+            //printf("P1: %d, P2: %d, P3: %d, P4: %d, P5: %d, P6: %d\n", projectileList[0].ypos, projectileList[1].ypos, projectileList[2].ypos, projectileList[3].ypos, projectileList[4].ypos, projectileList[5].ypos);
         }
     }
 }
@@ -737,19 +978,13 @@ int main(int argc, char** argv) {
     player1.spriteList[0].spriteoffset = 0;
     player1.spriteList[0].xoffset = 0;
     player1.spriteList[0].yoffset = 0;
-
     player1.spriteList[1].reg = -1;
-
     player1.spriteList[2].reg = -1;
-
     player1.spriteList[3].reg = -1;
 
     player1.polygonList[0].size = -1;
-
     player1.polygonList[1].size = -1;
-
     player1.polygonList[2].size = -1;
-
     player1.polygonList[3].size = -1;
 
     //Valores fixos de objeto do jogador 2
@@ -762,91 +997,103 @@ int main(int argc, char** argv) {
     player2.spriteList[0].spriteoffset = 1;
     player2.spriteList[0].xoffset = 0;
     player2.spriteList[0].yoffset = 0;
-
     player2.spriteList[1].reg = -1;
-
     player2.spriteList[2].reg = -1;
-
     player2.spriteList[3].reg = -1;
 
     player2.polygonList[0].size = -1;
-
     player2.polygonList[1].size = -1;
-
     player2.polygonList[2].size = -1;
-
     player2.polygonList[3].size = -1;
 
-    int enemyIndex;
-
-    //Valores dos inimigos
-    for(enemyIndex = 0; enemyIndex < 4; enemyIndex++) {
+    int enemyIndex0;
+    //Valores fixos de objeto dos inimigos
+    for(enemyIndex0 = 0; enemyIndex0 < 4; enemyIndex0++) {
         
-        enemyList[enemyIndex].xpos = 200;
-        enemyList[enemyIndex].ypos = 40;
-        enemyList[enemyIndex].xStart = 0;
-        enemyList[enemyIndex].yStart = 0;
-        enemyList[enemyIndex].xEnd = 19;
-        enemyList[enemyIndex].yEnd = 19;
-        enemyList[enemyIndex].status = 0;
+        enemyList[enemyIndex0].xStart = 0;
+        enemyList[enemyIndex0].yStart = 0;
+        enemyList[enemyIndex0].xEnd = 19;
+        enemyList[enemyIndex0].yEnd = 19;
 
-        enemyList[enemyIndex].spriteList[0].reg = (5 + enemyIndex);
-        enemyList[enemyIndex].spriteList[0].spriteoffset = 3;
-        enemyList[enemyIndex].spriteList[0].xoffset = 0;
-        enemyList[enemyIndex].spriteList[0].yoffset = 0;
+        enemyList[enemyIndex0].spriteList[0].reg = (5 + enemyIndex0);
+        enemyList[enemyIndex0].spriteList[0].spriteoffset = 3;
+        enemyList[enemyIndex0].spriteList[0].xoffset = 0;
+        enemyList[enemyIndex0].spriteList[0].yoffset = 0;
 
-        enemyList[enemyIndex].spriteList[1].reg = -1;
-        enemyList[enemyIndex].spriteList[2].reg = -1;
-        enemyList[enemyIndex].spriteList[3].reg = -1;
+        enemyList[enemyIndex0].spriteList[1].reg = -1;
+        enemyList[enemyIndex0].spriteList[2].reg = -1;
+        enemyList[enemyIndex0].spriteList[3].reg = -1;
 
-        enemyList[enemyIndex].polygonList[0].size = -1;
-        enemyList[enemyIndex].polygonList[1].size = -1;
-        enemyList[enemyIndex].polygonList[2].size = -1;
-        enemyList[enemyIndex].polygonList[3].size = -1;
+        enemyList[enemyIndex0].polygonList[0].size = -1;
+        enemyList[enemyIndex0].polygonList[1].size = -1;
+        enemyList[enemyIndex0].polygonList[2].size = -1;
+        enemyList[enemyIndex0].polygonList[3].size = -1;
     }
 
-    projetil.xpos = 200;
-    projetil.ypos = 200;
-    projetil.xStart = 0;
-    projetil.yStart = 0;
-    projetil.xEnd = 19;
-    projetil.yEnd = 19;
-    projetil.status = 0;
+    int projectileIndex0;
+    //Valores fixos de objeto dos projeteis
+    for(projectileIndex0 = 0; projectileIndex0 < 6; projectileIndex0++) {
+        
+        projectileList[projectileIndex0].xStart = 8;
+        projectileList[projectileIndex0].yStart = 5;
+        projectileList[projectileIndex0].xEnd = 13;
+        projectileList[projectileIndex0].yEnd = 14;
 
-    projetil.spriteList[0].reg = 9;
-    projetil.spriteList[0].spriteoffset = 2;
-    projetil.spriteList[0].xoffset = 0;
-    projetil.spriteList[0].yoffset = 0;
+        projectileList[projectileIndex0].spriteList[0].reg = (9 + projectileIndex0);
+        projectileList[projectileIndex0].spriteList[0].spriteoffset = 2;
+        projectileList[projectileIndex0].spriteList[0].xoffset = 0;
+        projectileList[projectileIndex0].spriteList[0].yoffset = 0;
 
-    projetil.spriteList[1].reg = -1;
-    projetil.spriteList[2].reg = -1;
-    projetil.spriteList[3].reg = -1;
+        projectileList[projectileIndex0].spriteList[1].reg = -1;
+        projectileList[projectileIndex0].spriteList[2].reg = -1;
+        projectileList[projectileIndex0].spriteList[3].reg = -1;
 
-    projetil.polygonList[0].size = -1;
-    projetil.polygonList[1].size = -1;
-    projetil.polygonList[2].size = -1;
-    projetil.polygonList[3].size = -1;
-
-    printList[6] = 1;
+        projectileList[projectileIndex0].polygonList[0].size = -1;
+        projectileList[projectileIndex0].polygonList[1].size = -1;
+        projectileList[projectileIndex0].polygonList[2].size = -1;
+        projectileList[projectileIndex0].polygonList[3].size = -1;
+    }
     
     while(appState != 4) {
         
-        //Valores iniciais de sessao de jogo do jogador 1
-        printList[0] = 1;
+        //Valores iniciais gerais da sessao
+        sessionTime = 0;
+        pontuacao = 0;
 
+        //Converte int em array de caracteres de ate 32 caracteres (o que cabe na tela apartir da posicao inicial)
+        char int_array[32];
+        sprintf(int_array, "%d", pontuacao*100);
+
+        mostrar_numero(int_array);
+
+        //Valores iniciais de sessao de jogo do jogador 1
         player1.xpos = 260;
         player1.ypos = 260;
         player1.status = 0;
+        printList[0] = 1;
         
         //Valores iniciais de sessao de jogo do jogador 2
-        printList[1] = 1;
-        
         player2.xpos = 320;
         player2.ypos = 260;
         player2.status = 0;
+        printList[1] = 1;
 
+        int enemyIndex1;
+        //Valores iniciais de sessao de jogo dos inimigos
+        for(enemyIndex1 = 0; enemyIndex1 < 4; enemyIndex1++) {
+            enemyList[enemyIndex1].status = 1;
+        }
+
+        int projectileIndex1;
+        //Valores iniciais de sessao de jogo dos projeteis
+        for(projectileIndex1 = 0; projectileIndex1 < 6; projectileIndex1++) {
+            projectileList[projectileIndex1].status = 1;
+        }
+
+        //Caso seja a primeira vez que esta rodando, cria as threads
         if (isFirstRun == 1) {
             
+            //Cria a thread de controle dos inimigos
             pthread_t thread_mov_inimigo;
 
             if(pthread_create(&thread_mov_inimigo, NULL, controlar_inimigos, NULL) != 0){
@@ -854,6 +1101,7 @@ int main(int argc, char** argv) {
                 return 1;
             }
 
+            //Cria a thread de movimento dos projeteis
             pthread_t thread_mov_projetil;
 
             if(pthread_create(&thread_mov_projetil, NULL, movimento_projetil, NULL) != 0){
@@ -890,7 +1138,7 @@ int main(int argc, char** argv) {
             }
         }
         //Loop principal que le os botoes para controle do jogo
-        while(appState != 3 && appState != 4) {
+        while(appState != 2 && appState != 3 && appState != 4) {
             btnValue = RDBT();
         }
         
@@ -906,15 +1154,24 @@ int main(int argc, char** argv) {
             //Marca novamente a finalizacao do programa com estado 4
             appState = 4;
         }
+        else if (appState == 2) {
+
+            while(btnValue != 2) {
+                btnValue = RDBT();
+            }
+
+            //Volta o estado para "pausa"
+            appState = 1;
+
+            //Atualiza variavel de primeira execucao
+            isFirstRun = 0;
+        }
         else {
             //Volta o estado para "pausa"
             appState = 1;
 
             //Atualiza variavel de primeira execucao
             isFirstRun = 0;
-
-            //Reseta o tempo de sessao de jogo
-            sessionTime = 0;
         }
     }
 }
