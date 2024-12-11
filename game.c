@@ -823,7 +823,7 @@ void* movimento_projetil(void* arg){
                     }
 
                     //Verifica se chegou ao fim da tela (vertical)
-                    if ((enemyList[projectileIndex].ypos) < 35) {
+                    if ((projectileList[projectileIndex].ypos) < 35) {
                         
                         //Estado 1 (destruido/out of bounds)
                         projectileList[projectileIndex].status = 1;
