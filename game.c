@@ -505,7 +505,7 @@ void* printar_objetos(void* arg) {
                         }
                         else{
                           //printf("status: %d", projetil.status);
-                          WBR_SPRITE(actualSprite.reg, actualSprite.spriteoffset, (xbase + actualSprite.xoffset), (ybase + actualSprite.yoffset), projetil.status);    
+                          WBR_SPRITE(actualSprite.reg, actualSprite.spriteoffset, (xbase + actualSprite.xoffset), (ybase + actualSprite.yoffset), projectileList[(printCount - 6)].status);    
                         }                    
                     }
 
@@ -935,7 +935,7 @@ int main(int argc, char** argv) {
         enemyList[enemyIndex0].xEnd = 19;
         enemyList[enemyIndex0].yEnd = 19;
 
-        enemyList[enemyIndex0].spriteList[0].reg = (5 + enemyIndex);
+        enemyList[enemyIndex0].spriteList[0].reg = (5 + enemyIndex0);
         enemyList[enemyIndex0].spriteList[0].spriteoffset = 3;
         enemyList[enemyIndex0].spriteList[0].xoffset = 0;
         enemyList[enemyIndex0].spriteList[0].yoffset = 0;
