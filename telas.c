@@ -158,7 +158,7 @@ unsigned int imprime_tela_game_over_data[4800] ={
         
         for(cont1 = 0; cont1 < 80; cont1++) {
             
-            WBM(cont1, cont0, tela_game_over_data[cont3]);
+            WBM(cont1, cont0, imprime_tela_game_over_data[cont3]);
             cont3++;
         }
     }
