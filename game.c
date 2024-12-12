@@ -1088,7 +1088,7 @@ int main(int argc, char** argv) {
         enemyList[enemyIndex0].xEnd = 19;
         enemyList[enemyIndex0].yEnd = 19;
 
-        enemyList[enemyIndex0].spriteList[0].reg = (5 + enemyIndex0);
+        enemyList[enemyIndex0].spriteList[0].reg = (3 + enemyIndex0);
         enemyList[enemyIndex0].spriteList[0].xoffset = 0;
         enemyList[enemyIndex0].spriteList[0].yoffset = 0;
 
