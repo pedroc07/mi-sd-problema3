@@ -13,12 +13,11 @@
 //Biblioteca original de mapeamento da memoria do dispositivo DE1-SoC com Linux embutido
 #include "map.c"
 
-//Biblioteca original de controle da GPU customizada (ARM v7)
+//Biblioteca original de controle da GPU customizada para arquitetura ARM
 #include "vlib.h"
 
-//Bibliotecas auxiliares das memorias da GPU (tabelas de sprites e poligonos)
+//Bibliotecas auxiliares das memorias da GPU (tabelas de sprites e blocos de background)
 #include "sprite_data.c"
-
 #include "telas.c"
 
 typedef struct {
@@ -311,6 +310,15 @@ void* ler_acelerometro(void* arg) {
 
                         if (player2.status == 1) {
                             appState = 2;
+
+                            //Exibe tela de fim de jogo
+                            tela_game_over();
+
+                            int cont;
+                            //Atualiza a printList
+                            for(cont =0; cont < 12; cont++){
+                                printList[cont] = 1;
+                            }
                         }
                     }
                 }
@@ -371,7 +379,6 @@ void* ler_mouse(void* arg){
 
     if(fd == -1) {
         printf("ERROR Opening %s\n", pDevice);
-        return -1;
     }
     //Dados do mouse
     unsigned char data[3];
@@ -444,6 +451,15 @@ void* ler_mouse(void* arg){
 
                             if (player1.status == 1) {
                                 appState = 2;
+                                
+                                //Exibe tela de fim de jogo
+                                tela_game_over();
+                                
+                                int cont;
+                                //Atualiza a printList
+                                for(cont =0; cont < 12; cont++){
+                                    printList[cont] = 1;
+                                }
                             }
                         }
                     }
@@ -589,63 +605,93 @@ void* monitorar_jogo(void* arg) {
     int cont;
 
     while(1) {
-        //printf("AS: %d\n", appState);
 
-        //Se o valor do botao e 1, encerramos o jogo
+        //Se o valor do botao e 1, mudamos o estado de jogo para encerramento
         if (btnValue == 1) {
+            
             appState = 4;
 
+            //Atualiza a printList
             for(cont =0; cont < 12; cont++){
                 printList[cont] = 1;
             }
         }
         //Se o valor do botao e 2, reiniciamos o jogo
         else if (btnValue == 2) {
+            
             appState = 3;
             
+            //Atualiza a printList
             for(cont =0; cont < 12; cont++){
                 printList[cont] = 1;
             }
+
             //Espera 400 milissegundos antes de continuar a thread (debouncing e "cooldown")
             usleep(400000);
-            
             //Apos isso, segura tambem enquanto o botao nao for solto (nao permite ativacao seguida por manter pressionado)
             while (btnValue != 0) { }
             //Espera 100 milissegundos antes de continuar a thread (debouncing)
             usleep(100000);
         }
-        //Se o valor do botao e 4 e o estado e 0, pausamos o jogo
-        else if ((btnValue == 4) && (appState == 0)) {
+        
+        //Se o estado e do jogo e 0 e o valor do botao e 4, pausamos o jogo
+        if ((appState == 0) && (btnValue == 4)) {
+            
             appState = 1;
 
+            //Exibe a tela de jogo
+            imprime_tela_jogo();
+
+            //Atualiza a printList
             for(cont =0; cont < 12; cont++){
                 printList[cont] = 1;
             }
 
             //Espera 400 milissegundos antes de continuar a thread (debouncing e "cooldown")
             usleep(400000);
-            
             //Apos isso, segura tambem enquanto o botao nao for solto (nao permite ativacao seguida por manter pressionado)
             while (btnValue != 0) { }
             //Espera 100 milissegundos antes de continuar a thread (debouncing)
             usleep(100000);
         }
-        //Se o valor do botao e 4 e o estado e 1, continuamos o jogo
-        else if ((btnValue == 4) && (appState == 1)) {
+        //Se o estado e do jogo e 1 e o valor do botao e 4, continuamos o jogo
+        else if ((appState == 1) && (btnValue == 4)) {
+            
             appState = 0;
+            
+            //Exibe a tela de jogo
             imprime_tela_jogo();
 
+            //Atualiza a printList
             for(cont =0; cont < 12; cont++){
                 printList[cont] = 1;
             }
 
             //Espera 400 milissegundos antes de continuar a thread (debouncing e "cooldown")
             usleep(400000);
-            
             //Apos isso, segura tambem enquanto o botao nao for solto (nao permite ativacao seguida por manter pressionado)
             while (btnValue != 0) { }
             //Espera 100 milissegundos antes de continuar a thread (debouncing)
             usleep(100000);
+        }
+        //Se o estado do jogo e 4, fazemos o processo de encerramento do jogo
+        else if (appState == 4) {
+
+            //Converte int em array de caracteres
+            char int_array[6];
+            sprintf(int_array, "%d", 888888);
+
+            //Mostra o numero 888888 para resetar o display de 7 segmentos
+            mostrar_numero(int_array);
+
+            //Limpa tela
+            tela_vazia();
+
+            //Espera 2 segundos para garantir a finalizacao do programa
+            usleep(2000);
+
+            //Marca a finalizacao definitiva do programa com estado 5
+            appState = 5;
         }
     }
 }
@@ -759,6 +805,15 @@ void* controlar_inimigos(void* arg) {
 
                         if (player2.status == 1) {
                             appState = 2;
+
+                            //Exibe tela de fim de jogo
+                            tela_game_over();
+
+                            int cont;
+                            //Atualiza a printList
+                            for(cont =0; cont < 12; cont++){
+                                printList[cont] = 1;
+                            }
                         }
                     }
 
@@ -772,6 +827,15 @@ void* controlar_inimigos(void* arg) {
 
                         if (player1.status == 1) {
                             appState = 2;
+
+                            //Exibe tela de fim de jogo
+                            tela_game_over();
+
+                            int cont;
+                            //Atualiza a printList
+                            for(cont =0; cont < 12; cont++){
+                                printList[cont] = 1;
+                            }
                         }
                     }
 
@@ -1028,10 +1092,10 @@ int main(int argc, char** argv) {
         enemyList[enemyIndex0].spriteList[0].xoffset = 0;
         enemyList[enemyIndex0].spriteList[0].yoffset = 0;
 
-        gettimeofday(&tempo, NULL);
-        tempo_preciso = tempo.tv_usec;
-        srand (tempo_preciso);
-        spr_offset = (2 + (rand() % 6));
+        //gettimeofday(&tempo, NULL);
+        //tempo_preciso = tempo.tv_usec;
+        //srand (tempo_preciso);
+        //spr_offset = (2 + (rand() % 6));
         enemyList[enemyIndex0].spriteList[0].spriteoffset = 0;
 
         enemyList[enemyIndex0].spriteList[1].reg = -1;
@@ -1070,11 +1134,13 @@ int main(int argc, char** argv) {
         projectileList[projectileIndex0].polygonList[3].size = -1;
     }
     
-    while(appState != 4) {
+    while(appState != 5) {
         
         //Valores iniciais gerais da sessao
         sessionTime = 0;
         pontuacao = 0;
+        enemyCount = 0;
+        projectileCount = 0;
 
         //Converte int em array de caracteres de ate 32 caracteres (o que cabe na tela apartir da posicao inicial)
         char int_array[32];
@@ -1153,41 +1219,29 @@ int main(int argc, char** argv) {
                 return 1;
             }
         }
+
         //Loop principal que le os botoes para controle do jogo
         while(appState != 2 && appState != 3 && appState != 4) {
             btnValue = RDBT();
         }
         
-        //Se o estado e jogo for 4 (sair do jogo) 
-        if (appState == 4) {
+        //Se o estado do jogo for 2 (fim de jogo) ou 4 (sair do jogo)
+        if ((appState == 2) || (appState == 4)) {
             
-            //Volta o estado para "pausa"
-            appState = 1;
-
-            //Da 2 segundos para limpar a tela
-            usleep(2000000);
-
-            //Marca novamente a finalizacao do programa com estado 4
-            appState = 4;
-        }
-        else if (appState == 2) {
-
-            while(btnValue != 2) {
+            //Segura a  enquanto o estado for 2 ou 4
+            while(appState == 2 || appState == 4) {
                 btnValue = RDBT();
             }
+        }
+        
+        //Se o estado do jogo nao for 5
+        if(appState != 5) {
 
             //Volta o estado para "pausa"
             appState = 1;
-
-            //Atualiza variavel de primeira execucao
-            isFirstRun = 0;
         }
-        else {
-            //Volta o estado para "pausa"
-            appState = 1;
 
-            //Atualiza variavel de primeira execucao
-            isFirstRun = 0;
-        }
+        //Atualiza variavel de primeira execucao
+        isFirstRun = 0;
     }
 }

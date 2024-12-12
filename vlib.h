@@ -1,5 +1,4 @@
-#ifndef vlib.h
-#define vlib.h
+#define vlib 
 
 extern void MAP();
 
@@ -18,5 +17,3 @@ extern void DP(unsigned int x, unsigned int y, unsigned int cor, unsigned int fo
 extern int RDBT();
 
 extern void TNLD(unsigned int indice_led, unsigned int valor_bit);
-
-#endif
