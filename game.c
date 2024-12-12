@@ -998,7 +998,7 @@ int main(int argc, char** argv) {
     player2.yEnd = 19;
 
     player2.spriteList[0].reg = 3;
-    player2.spriteList[0].spriteoffset = 0;
+    player2.spriteList[0].spriteoffset = 2;
     player2.spriteList[0].xoffset = 0;
     player2.spriteList[0].yoffset = 0;
     player2.spriteList[1].reg = -1;
