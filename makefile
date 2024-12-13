@@ -5,18 +5,8 @@ game: vlib.o game.o
 	rm vlib.o
 	rm game.o
 
-mouse: vlib.o mouse.o
-	gcc vlib.o mouse_test.o -o mouse -lpthread
-	rm vlib.o
-	rm mouse_test.o
-
 vlib.o:
-	as vlib.s -o vlib.o
-
-mouse.o:
-	gcc -c mouse_test.c -o mouse_test.o -lpthread
+	as src/lib/vlib.s -o vlib.o
 
 game.o:
-	gcc -c game.c -o game.o -lpthread
-
-
+	gcc -c src/game.c -o game.o -lpthread
