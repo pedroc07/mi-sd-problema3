@@ -565,18 +565,14 @@ void* printar_objetos(void* arg) {
                     if(actualSprite.reg >= 1) {
                         //Numero sp do sprite inicialmente 0, que desativa
                         int spriteSp = 0;
+                        
                         //Porem, caso o jogo esteja em execucao e o estado seja 0, muda para 1, ativando
                         if((appState == 0) && (actualState == 0)) {
                             spriteSp = 1;
                         }
+
                         //Envia comando de "escrever" sprite
-                        //if (printCount < 6){
-                        WBR_SPRITE(actualSprite.reg, actualSprite.spriteoffset, (xbase + actualSprite.xoffset), (ybase + actualSprite.yoffset), spriteSp);
-                        //}
-                        /*else{
-                          //printf("status: %d", projetil.status);
-                          WBR_SPRITE(actualSprite.reg, actualSprite.spriteoffset, (xbase + actualSprite.xoffset), (ybase + actualSprite.yoffset), projectileList[(printCount - 6)].status);    
-                        }*/                    
+                        WBR_SPRITE(actualSprite.reg, actualSprite.spriteoffset, (xbase + actualSprite.xoffset), (ybase + actualSprite.yoffset), spriteSp);                  
                     }
 
                     if(actualPolygon.size >= 1) {
@@ -988,9 +984,6 @@ void* movimento_projetil(void* arg){
             if(projectileCooldown1 < 64) {
                 projectileCooldown1 += 1;
             }
-
-            //printf("PCD0: %d, PCD1: %d, EC: %d, PC: %d\n", projectileCooldown0, projectileCooldown1, enemyCount, projectileCount);
-            //printf("P1: %d, P2: %d, P3: %d, P4: %d, P5: %d, P6: %d\n", projectileList[0].ypos, projectileList[1].ypos, projectileList[2].ypos, projectileList[3].ypos, projectileList[4].ypos, projectileList[5].ypos);
         }
     }
 }
@@ -1062,7 +1055,7 @@ int main(int argc, char** argv) {
     player2.yEnd = 19;
 
     player2.spriteList[0].reg = 3;
-    player2.spriteList[0].spriteoffset = 2;
+    player2.spriteList[0].spriteoffset = 0;
     player2.spriteList[0].xoffset = 0;
     player2.spriteList[0].yoffset = 0;
     player2.spriteList[1].reg = -1;
@@ -1088,7 +1081,7 @@ int main(int argc, char** argv) {
         enemyList[enemyIndex0].xEnd = 19;
         enemyList[enemyIndex0].yEnd = 19;
 
-        enemyList[enemyIndex0].spriteList[0].reg = (3 + enemyIndex0);
+        enemyList[enemyIndex0].spriteList[0].reg = (5 + enemyIndex0);
         enemyList[enemyIndex0].spriteList[0].xoffset = 0;
         enemyList[enemyIndex0].spriteList[0].yoffset = 0;
 
@@ -1096,7 +1089,7 @@ int main(int argc, char** argv) {
         //tempo_preciso = tempo.tv_usec;
         //srand (tempo_preciso);
         //spr_offset = (2 + (rand() % 6));
-        enemyList[enemyIndex0].spriteList[0].spriteoffset = 0;
+        enemyList[enemyIndex0].spriteList[0].spriteoffset = 2;
 
         enemyList[enemyIndex0].spriteList[1].reg = -1;
         enemyList[enemyIndex0].spriteList[2].reg = -1;
@@ -1107,8 +1100,6 @@ int main(int argc, char** argv) {
         enemyList[enemyIndex0].polygonList[2].size = -1;
         enemyList[enemyIndex0].polygonList[3].size = -1;
     }
-
-    //enemyList[0].spriteList[0].spriteoffset = 0;
 
     int projectileIndex0;
     //Valores fixos de objeto dos projeteis
