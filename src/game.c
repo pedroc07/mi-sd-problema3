@@ -606,6 +606,7 @@ void* monitorar_jogo(void* arg) {
         if (btnValue == 1) {
             
             appState = 4;
+            WBR_SPRITE(22, 14, 20, 20, 0);
 
             //Atualiza a printList
             for(cont =0; cont < 12; cont++){
@@ -616,6 +617,7 @@ void* monitorar_jogo(void* arg) {
         else if (btnValue == 2) {
             
             appState = 3;
+            WBR_SPRITE(22, 14, 20, 20, 0);
             
             //Atualiza a printList
             for(cont =0; cont < 12; cont++){
@@ -637,6 +639,7 @@ void* monitorar_jogo(void* arg) {
 
             //Exibe a tela de jogo
             imprime_tela_jogo();
+            WBR_SPRITE(22, 15, 20, 20, 1);
 
             //Atualiza a printList
             for(cont =0; cont < 12; cont++){
@@ -657,6 +660,7 @@ void* monitorar_jogo(void* arg) {
             
             //Exibe a tela de jogo
             imprime_tela_jogo();
+            WBR_SPRITE(22, 14, 20, 20, 0);
 
             //Atualiza a printList
             for(cont =0; cont < 12; cont++){
@@ -849,11 +853,11 @@ void* controlar_inimigos(void* arg) {
                     //Animacao
                     if(animationCount >= 10) {
 
-                        if((enemyList[outerEnemyIndex].spriteList[0].spriteoffset) < 7) {
+                        if((enemyList[outerEnemyIndex].spriteList[0].spriteoffset) < 8) {
                             enemyList[outerEnemyIndex].spriteList[0].spriteoffset += 1;
                         }
                         else {
-                            enemyList[outerEnemyIndex].spriteList[0].spriteoffset = 2;
+                            enemyList[outerEnemyIndex].spriteList[0].spriteoffset = 3;
                         }
 
                         animationCount = 0;
@@ -995,11 +999,11 @@ void* movimento_projetil(void* arg){
                     //Animacao
                     if(animationCount >= 5) {
 
-                        if((projectileList[projectileIndex].spriteList[1].spriteoffset) < 12) {
+                        if((projectileList[projectileIndex].spriteList[1].spriteoffset) < 14) {
                             projectileList[projectileIndex].spriteList[1].spriteoffset += 1;
                         }
                         else {
-                            projectileList[projectileIndex].spriteList[1].spriteoffset = 8;
+                            projectileList[projectileIndex].spriteList[1].spriteoffset = 10;
                         }
 
                         animationCount = 0;
@@ -1123,7 +1127,7 @@ int main(int argc, char** argv) {
         gettimeofday(&tempo, NULL);
         tempo_preciso = tempo.tv_usec;
         srand (tempo_preciso);
-        spr_offset = (2 + (rand() % 6));
+        spr_offset = (3 + (rand() % 6));
         enemyList[enemyIndex0].spriteList[0].spriteoffset = spr_offset;
 
         enemyList[enemyIndex0].spriteList[1].reg = -1;
@@ -1150,7 +1154,7 @@ int main(int argc, char** argv) {
         projectileList[projectileIndex0].spriteList[0].xoffset = 0;
         projectileList[projectileIndex0].spriteList[0].yoffset = 0;
         projectileList[projectileIndex0].spriteList[1].reg = (15 + projectileIndex0);
-        projectileList[projectileIndex0].spriteList[1].spriteoffset = 8;
+        projectileList[projectileIndex0].spriteList[1].spriteoffset = 10;
         projectileList[projectileIndex0].spriteList[1].xoffset = 0;
         projectileList[projectileIndex0].spriteList[1].yoffset = 20;
         projectileList[projectileIndex0].spriteList[2].reg = -1;
@@ -1247,6 +1251,9 @@ int main(int argc, char** argv) {
                 return 1;
             }
         }
+
+        //Exibe tela inicial
+        tela_inicial();
 
         //Loop principal que le os botoes para controle do jogo
         while(appState != 2 && appState != 3 && appState != 4) {
