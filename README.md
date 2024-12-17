@@ -12,11 +12,13 @@ O jogo foi desenvolvido para uma plataforma DE1-SOC com sistema operacional linu
 ## Jogabilidade
 
 O jogador 1 controla a nave magenta através da rotação da placa DE1-SOC, fazendo uso do acelerômetro do dispositivo. Além disso, o jogador 1 pode tirar mísseis e controlar o estado de jogo por meio dos botões da placa. O jogador 2 controla a nave cinza em formato de pinguim através do movimento do mouse. Pode atirar mísseis através do botão esquerdo do mouse.
+
 <img src="https://github.com/user-attachments/assets/7485b9bc-31a6-4715-b8c6-df57bbc80b9c" width="500">
 
+<img src="https://github.com/user-attachments/assets/998a3f10-9e1d-4efd-83f7-ceb0bd82720c" width="500">
 
-<img src="https://github.com/user-attachments/assets/5a7f443b-069f-49f8-8831-b22e59272010" width="700">
+<img src="https://github.com/user-attachments/assets/f8bf73a8-d905-4a10-b1e1-441fae57c8e1" width="500">
 
-<img src="https://github.com/user-attachments/assets/fa3da865-8ca9-4d46-9a5c-10165dbc12c7" width="700">
+
 
 
