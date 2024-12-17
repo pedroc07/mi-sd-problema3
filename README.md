@@ -13,4 +13,4 @@ O jogador 1 controla a nave magenta através da rotação da placa DE1-SOC, faze
 
 O jogador 2 controla a nave cinza em formato de pinguim através do movimento do mouse. Pode atirar mísseis através do botão esquerdo do mouse.
 
-![botoes2](https://github.com/user-attachments/assets/f90ed1e1-7127-45e9-a49c-a4f4c2bd2177)
+![botoes2](https://github.com/user-attachments/assets/fa3da865-8ca9-4d46-9a5c-10165dbc12c7)
