@@ -1,7 +1,7 @@
 # Shooter dos cria
 Shooter dos cria é um jogo de batalha espacial no estilo shooter que foi feito utilizando a biblioteca gráfica desenvolvida anteriormente para um processador gráfico embarcado na plataforma DE1-SOC.
 
-A terra é invadida por seres extraterrestres em naves esféricas. Dois astronautas são encarregados de usar a mais alta tecnologia do planeta para eliminar os invasores através de suas naves lançadoras de mísseis.
+Nele, a terra é invadida por seres extraterrestres em naves esféricas. Dois astronautas são encarregados de usar a mais alta tecnologia do planeta para eliminar os invasores através de suas naves lançadoras de mísseis.
 
 ## Jogabilidade
 
