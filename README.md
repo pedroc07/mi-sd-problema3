@@ -15,9 +15,9 @@ O jogador 1 controla a nave magenta através da rotação da placa DE1-SOC, faze
 
 <img src="https://github.com/user-attachments/assets/7485b9bc-31a6-4715-b8c6-df57bbc80b9c" width="500">
 
-<img src="https://github.com/user-attachments/assets/998a3f10-9e1d-4efd-83f7-ceb0bd82720c" width="700">
-
 <img src="https://github.com/user-attachments/assets/f8bf73a8-d905-4a10-b1e1-441fae57c8e1" width="700">
+
+<img src="https://github.com/user-attachments/assets/998a3f10-9e1d-4efd-83f7-ceb0bd82720c" width="700">
 
 
 
